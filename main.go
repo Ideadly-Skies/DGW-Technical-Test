@@ -1,10 +1,11 @@
 package main
 
 import (
+	config "dgw-technical-test/config/database"
 	_ "dgw-technical-test/docs"
-	"dgw-technical-test/config/database"
 	admin_handler "dgw-technical-test/internal/adminHandler"
 	cust_middleware "dgw-technical-test/internal/middleware"
+	product_handler "dgw-technical-test/internal/productHandler"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -16,7 +17,7 @@ import (
 // @description API documentation for the FTGO PlashCash project.
 // @termsOfService http://example.com/terms/
 // @contact.Obie API Support
-// @contact.url www.linkedin.com/in/obie-ananda-a87a64212 
+// @contact.url www.linkedin.com/in/obie-ananda-a87a64212
 // @contact.email Obie.kal22@gmail.com
 // @license.name MIT
 // @license.url http://opensource.org/licenses/MIT
@@ -44,13 +45,15 @@ func main() {
 	e.POST("/admin/login", admin_handler.LoginStoreAdmin)
 
 	// protected routes for store admin using JWT middleware
-	storeAdminGroup := e.Group("/admin")
-	storeAdminGroup.Use(cust_middleware.JWTMiddleware)
+	AdminGroup := e.Group("/admin")
+	AdminGroup.Use(cust_middleware.JWTMiddleware)
 
 	// Route for Admin
-	
+	AdminGroup.GET("/products", product_handler.GetAllProducts)
+	AdminGroup.POST("/create-product", product_handler.CreateProduct)
+	AdminGroup.PUT("/products/:id", product_handler.UpdateProduct)
+	AdminGroup.DELETE("/products/:id", product_handler.DeleteProduct)
 
-	
 	// start the server at 8080
 	e.Logger.Fatal(e.Start(":8080"))
 }
