@@ -1,38 +1,194 @@
--- DDL Queries: Database Schema Creation
-DROP TABLE IF EXISTS admins CASCADE;
-DROP TABLE IF EXISTS products CASCADE;
+-- DDL Queries: Schema Creation (9)
+-- Drop the dependent tables first (those that reference other tables)
+DROP TABLE IF EXISTS wallet_transactions CASCADE;  
+DROP TABLE IF EXISTS reviews CASCADE;              
+DROP TABLE IF EXISTS logs CASCADE;                 
+DROP TABLE IF EXISTS payments CASCADE;             
+DROP TABLE IF EXISTS order_items CASCADE;          
+DROP TABLE IF EXISTS orders CASCADE;               
+DROP TABLE IF EXISTS products CASCADE;             
+DROP TABLE IF EXISTS suppliers CASCADE;            
+DROP TABLE IF EXISTS admins CASCADE;               
+DROP TABLE IF EXISTS farmers CASCADE;
 
--- Table: Store Admins
+-- Table: Admins (DGW)
 CREATE TABLE admins (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    jwt_token TEXT, -- Added JWT Token
+    id SERIAL PRIMARY KEY, 
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    jwt_token TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: Farmers
+CREATE TABLE farmers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    address VARCHAR(500),
+    phone_number VARCHAR(100),
+    farm_type VARCHAR(100),
+    wallet_balance DECIMAL(10, 2) DEFAULT 0.00,
+    jwt_token TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: Wallet Transactions
+CREATE TABLE wallet_transactions (
+    id SERIAL PRIMARY KEY,
+    farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
+    transaction_type VARCHAR(100) CHECK (transaction_type IN ('deposit', 'withdrawal')),
+    amount DECIMAL(10, 2) NOT NULL,
+    balance_after_transaction DECIMAL(10, 2),
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description TEXT
+);
+
+-- Table: Suppliers
+CREATE TABLE suppliers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(100),
+    phone_number VARCHAR(100),
+    category VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: Products
 CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),         
-    admin_id UUID REFERENCES admins(id) ON DELETE SET NULL, 
-    name VARCHAR(255) NOT NULL,                             
+    id SERIAL PRIMARY KEY,         
+    supplier_id INTEGER REFERENCES suppliers(id) ON DELETE CASCADE, 
+    name VARCHAR(250) NOT NULL,                             
     description TEXT,                                      
     price DECIMAL(10, 2) NOT NULL,                          
     stock_quantity INT NOT NULL,                            
-    category VARCHAR(255),                                  
-    image_url TEXT,                                         
+    category VARCHAR(100),                                  
+    brand VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP          
 );
 
--- Insert sample store admins (sample seed)
-INSERT INTO admins (name, email, password) VALUES
-('Store Admin Alice', 'admin.alice@ecostore.com', 'adminpass123'),
-('Store Admin Bob', 'admin.bob@greenshop.com', 'adminpass456');
+-- Table: Orders
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
+    status VARCHAR(100) CHECK (status IN ('pending', 'completed', 'cancelled')),
+    total_price DECIMAL(10, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Insert sample products (sample seed)
-INSERT INTO products (admin_id, name, description, price, stock_quantity, category, image_url) VALUES
-((SELECT id FROM admins WHERE email = 'admin.alice@ecostore.com'), 'Eco-friendly T-Shirt', 'A comfortable eco-friendly t-shirt made from organic cotton.', 19.99, 100, 'Apparel', 'https://ecostore.com/images/t-shirt.jpg'),
-((SELECT id FROM admins WHERE email = 'admin.bob@greenshop.com'), 'Green Energy Light Bulb', 'LED light bulb with energy-saving features.', 5.99, 200, 'Electronics', 'https://greenshop.com/images/lightbulb.jpg');
+-- Table: Order Items
+CREATE TABLE order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+    quantity INT,
+    price DECIMAL(10, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: Payments
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2),
+    payment_method VARCHAR(250),
+    status VARCHAR(100) CHECK (status IN ('pending', 'completed', 'failed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: Logs
+CREATE TABLE logs (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER REFERENCES admins(id) ON DELETE CASCADE,
+    action VARCHAR(100),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    details TEXT
+);
+
+-- Table: Reviews
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(100) CHECK (status IN ('pending', 'approved', 'rejected'))
+);
+
+-- DML Query: populating the created schemas
+-- Insert sample admins
+INSERT INTO admins (name, email, password, role) VALUES
+('Super Admin Diana', 'superadmin@dgwmart.com', 'adminpass123', 'Super Admin'),
+('Admin Adi', 'admin.adi@dgwmart.com', 'adminpass456', 'Store Admin');
+
+-- Insert sample suppliers
+INSERT INTO suppliers (name, address, phone_number, category) VALUES
+('PT Dharma Guna Wibawa', 'Jl. Raya Bogor No. 123, Jakarta', '08123456789', 'Agrokimia'),
+('DGW Fertilizer', 'Jl. Gresik No. 5, Gresik, Jawa Timur', '08567890123', 'Pupuk'),
+('PT Semesta Alam Sejati', 'Jl. Alam Sejati No. 10, Surabaya', '08987654321', 'Alat Pertanian'),
+('PT Bangun Sahabat Tani', 'Jl. Distribusi No. 15, Jakarta', '08123456788', 'Distribusi Internal');
+
+-- Insert sample products
+INSERT INTO products (supplier_id, name, description, price, stock_quantity, category, brand) VALUES
+(1, 'Supremo Herbicide', 'Herbicide for weed control', 35.50, 100, 'Agrokimia', 'DGW'),
+(1, 'Klensect Pesticide', 'Effective pesticide for pest control', 40.00, 120, 'Agrokimia', 'DGW'),
+(2, 'Premium NPK Fertilizer', 'High-quality NPK fertilizer', 50.00, 150, 'Pupuk', 'DGW'),
+(2, 'Organic NPK Fertilizer', 'Organic-based NPK fertilizer', 45.00, 200, 'Pupuk', 'DGW'),
+(3, 'Electric Sprayer', 'Battery-operated sprayer for efficient spraying', 80.00, 100, 'Alat Pertanian', 'SAS'),
+(3, 'Manual Sprayer', 'Manual sprayer for small-scale farming', 15.00, 300, 'Alat Pertanian', 'SAS'),
+(3, 'Plastic Mulsa', 'Premium quality plastic mulch for crop protection', 10.00, 500, 'Alat Pertanian', 'SAS');
+
+-- Insert sample farmers
+INSERT INTO farmers (name, email, password, address, phone_number, farm_type, wallet_balance) VALUES
+('Petani Budi', 'petani.budi@farm.com', 'farmerpass123', 'Jl. Raya No. 10, Bali', '08123456789', 'Vegetables', 100.00),
+('Petani Siti', 'petani.siti@agri.com', 'farmerpass456', 'Jl. Tanah Merah No. 7, Bandung', '08234567890', 'Fruits', 200.00);
+
+-- Insert sample wallet transactions for Petani Budi
+INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, balance_after_transaction, description) VALUES
+(1, 'deposit', 150.00, 250.00, 'Deposit from sale of crops'),
+(1, 'withdrawal', 50.00, 200.00, 'ATM withdrawal for cash payment');
+
+-- Insert sample wallet transactions for Petani Siti
+INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, balance_after_transaction, description) VALUES
+(2, 'deposit', 300.00, 500.00, 'Deposit from sale of fruits'),
+(2, 'withdrawal', 100.00, 400.00, 'ATM withdrawal for cash payment');
+
+
+-- Insert sample orders
+INSERT INTO orders (farmer_id, status, total_price) VALUES
+(1, 'pending', 205.50),
+(2, 'completed', 235.00);
+
+-- Insert sample order items
+INSERT INTO order_items (order_id, product_id, quantity, price) VALUES
+(1, 1, 2, 35.50),
+(1, 2, 1, 40.00),
+(2, 3, 3, 50.00),
+(2, 4, 2, 45.00);
+
+-- Insert sample payments
+INSERT INTO payments (order_id, amount, payment_method, status) VALUES
+(1, 205.50, 'Credit Card', 'completed'),
+(2, 235.00, 'Bank Transfer', 'completed');
+
+-- Insert sample reviews
+INSERT INTO reviews (order_id, farmer_id, rating, comment, status) VALUES
+(1, 1, 5, 'Excellent pesticide, really effective on pests!', 'approved'),
+(2, 2, 4, 'Good quality fertilizer, but a bit expensive.', 'approved');
+
+-- Insert sample logs
+INSERT INTO logs (admin_id, action, details) VALUES
+(1, 'Product added', 'Supremo Herbicide and Klensect Pesticide added to the marketplace.'),
+(1, 'Order status updated', 'Order #1 status changed to completed.');

@@ -9,7 +9,7 @@
 - API must be created using **Go** Programming Language
 - Database Utilizes **MySQL / PostgreSQL.**
 
-**Bonus Points (Addressed):**
+**Bonus Points (To Be Addressed):**
 - Utilizes **clean architecture**
 - Utilizes **Dependency Injection** 
 - Utilizes **HTTP Framework**
@@ -21,7 +21,7 @@
 
 # Documentation
 
-This project's documentation could be accessed viaq
+This project's documentation could be accessed via
 
 ### Diagrams
 
