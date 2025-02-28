@@ -146,10 +146,47 @@ func (s *FarmerService) WithdrawMoney(farmerID int, amount float64, farmerName s
 
 	// Log the transaction in the wallet_transactions table
 	description := fmt.Sprintf("Withdrawal initiated for %s", farmerName)
-	if err := s.FarmerRepo.LogWalletTransaction(farmerID, amount, description); err != nil {
+	if err := s.FarmerRepo.LogWalletTransaction(farmerID, orderID, amount, description); err != nil {
 		return "", "", "", fmt.Errorf("Failed to log transaction: %v", err)
 	}
 
 	return resp.TransactionID, resp.OrderID, vaNumber, nil
+}
 
+// CheckWithdrawalStatus checks the withdrawal status and updates the farmer's wallet if successful
+func (s *FarmerService) CheckWithdrawalStatus(orderID string) (map[string]interface{}, error) {
+	resp , err := coreAPI.CheckTransaction(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch transaction status: %v", err)
+	}
+
+	// If the transaction is successful (settlement), update the wallet balance
+	if resp.TransactionStatus == "settlement" {
+		// Get the withdrawal amount
+		amount, err := s.FarmerRepo.GetWithdrawalAmount(orderID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch withdrawal amount: %v", err)
+		}
+
+		// Get the farmer ID associated with this order
+		farmerID, err := s.FarmerRepo.GetFarmerIDByOrderID(orderID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch farmer ID: %v", err)
+		}
+
+		// Update the farmer's wallet balance
+		err = s.FarmerRepo.UpdateFarmerWalletBalance(farmerID, amount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update wallet balance: %v", err)
+		}
+
+		// Mark the transaction as processed
+		err = s.FarmerRepo.MarkTransactionAsProcessed(orderID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to mark transaction as processed: %v", err)
+		}
+	}
+
+	// Return the updated status of the transaction
+	return map[string]interface{}{"transaction_status": resp.TransactionStatus}, nil
 }

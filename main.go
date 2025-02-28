@@ -46,7 +46,11 @@ func InitializeApp() *gin.Engine {
 		// get wallet balance (protected by JWT middleware)
 		farmerRoutes.GET("/wallet-balance", middleware.JWTAuthMiddleware(), farmerHandler.GetWalletBalance)
 
+		// withdraw money from the bank (protected by JWT middleware)
 		farmerRoutes.POST("/withdraw", middleware.JWTAuthMiddleware(), farmerHandler.WithdrawMoney)
+
+		// Add route to check withdrawal status
+		farmerRoutes.GET("/withdrawal-status/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.GetWithdrawalStatus)
 	}
 
 	return router

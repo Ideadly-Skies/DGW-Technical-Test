@@ -42,9 +42,10 @@ CREATE TABLE farmers (
 CREATE TABLE wallet_transactions (
     id SERIAL PRIMARY KEY,
     farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
+    order_id VARCHAR(255) NOT NULL,  -- Add order_id field
     transaction_type VARCHAR(100),
     amount DECIMAL(10, 2) NOT NULL,
-    status VARCHAR(50) CHECK (status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
+    status VARCHAR(50) CHECK (status IN ('pending', 'settlement', 'failed')) DEFAULT 'pending',
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Add created_at column
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Add updated_at column
@@ -79,7 +80,7 @@ CREATE TABLE products (
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
-    status VARCHAR(100) CHECK (status IN ('pending', 'completed', 'cancelled')),
+    status VARCHAR(100) CHECK (status IN ('pending', 'settlement', 'cancelled')),
     total_price DECIMAL(10, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -102,7 +103,7 @@ CREATE TABLE payments (
     order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
     amount DECIMAL(10, 2),
     payment_method VARCHAR(250),
-    status VARCHAR(100) CHECK (status IN ('pending', 'completed', 'failed')),
+    status VARCHAR(100) CHECK (status IN ('pending', 'settlement', 'failed')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

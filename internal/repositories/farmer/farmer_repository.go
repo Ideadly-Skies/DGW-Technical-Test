@@ -60,15 +60,80 @@ func (r *FarmerRepository) GetFarmerWalletBalance(farmerID int) (float64, error)
 }
 
 // LogWalletTransaction logs a new transaction in the wallet_transactions table (PENDING)
-func (r *FarmerRepository) LogWalletTransaction(farmerID int, amount float64, description string) error {
+func (r *FarmerRepository) LogWalletTransaction(farmerID int, orderID string, amount float64, description string) error {
 	// Insert the transaction into the farmers' transaction table (wallet_transactions)
 	transactionQuery := `
-		INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, status, description, created_at, updated_at)
-		VALUES ($1, 'Withdraw', $2, 'pending', $3, NOW(), NOW())
+		INSERT INTO wallet_transactions (farmer_id, order_id, transaction_type, amount, status, description, created_at, updated_at)
+		VALUES ($1, $2, 'Withdraw', $3, 'pending', $4, NOW(), NOW())
 	`
-	_, txnErr := r.DB.Exec(context.Background(), transactionQuery, farmerID, amount, description)
+	_, txnErr := r.DB.Exec(context.Background(), transactionQuery, farmerID, orderID, amount, description)
 	if txnErr != nil {
 		return fmt.Errorf("failed to log transaction: %v", txnErr)
+	}
+	return nil
+}
+
+// get transaction status for wallet withdraw transaction in here
+
+// GetWithdrawalStatus retrieves the status of a withdrawal transaction
+func (r *FarmerRepository) GetWithdrawalStatus(orderID string) (map[string]interface{}, error) {
+	var status string
+	var amount float64
+
+	// Query the status and amount from wallet_transactions using the order_id (assuming order_id is unique for each transaction)
+	query := `SELECT status, amount FROM wallet_transactions WHERE order_id = $1`
+	err := r.DB.QueryRow(context.Background(), query, orderID).Scan(&status, &amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get withdrawal status: %v", err)
+	}
+
+	// Return the transaction details
+	return map[string]interface{}{
+		"order_id": orderID,
+		"status":   status,
+		"amount":   amount,
+	}, nil
+}
+
+// GetWithdrawalAmount retrieves the amount of the withdrawal transaction
+func (r *FarmerRepository) GetWithdrawalAmount(orderID string) (float64, error) {
+	var amount float64
+	// Query the amount based on the order_id
+	query := `SELECT amount FROM wallet_transactions WHERE order_id = $1`
+	err := r.DB.QueryRow(context.Background(), query, orderID).Scan(&amount)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get withdrawal amount: %v", err)
+	}
+	return amount, nil
+}
+
+// GetFarmerIDByOrderID retrieves the farmer ID associated with the given order ID
+func (r *FarmerRepository) GetFarmerIDByOrderID(orderID string) (int, error) {
+	var farmerID int
+	query := `SELECT farmer_id FROM wallet_transactions WHERE order_id = $1`
+	err := r.DB.QueryRow(context.Background(), query, orderID).Scan(&farmerID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get farmer ID: %v", err)
+	}
+	return farmerID, nil
+}
+
+// UpdateFarmerWalletBalance updates the farmer's wallet balance after the transaction
+func (r *FarmerRepository) UpdateFarmerWalletBalance(farmerID int, amount float64) error {
+	query := `UPDATE farmers SET wallet_balance = wallet_balance + $1 WHERE id = $2`
+	_, err := r.DB.Exec(context.Background(), query, amount, farmerID)
+	if err != nil {
+		return fmt.Errorf("failed to update wallet balance: %v", err)
+	}
+	return nil
+}
+
+// MarkTransactionAsProcessed marks the transaction as processed (completed)
+func (r *FarmerRepository) MarkTransactionAsProcessed(orderID string) error {
+	query := `UPDATE wallet_transactions SET status = 'settlement' WHERE order_id = $1`
+	_, err := r.DB.Exec(context.Background(), query, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to mark transaction as processed: %v", err)
 	}
 	return nil
 }

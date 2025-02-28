@@ -121,7 +121,7 @@ func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 	// Extract farmer ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
 	farmerID := int(user["farmer_id"].(float64))  // Access the "farmer_id" from the claims
-	farmerName := user["name"].(string)            // Access the "name" from the claims
+	farmerName := user["name"].(string)           // Access the "name" from the claims
 
 	// Bind and validate request body
 	var req PaymentRequest
@@ -151,4 +151,30 @@ func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 		"gross_amount":   req.Amount,
 		"status":         "Pending",
 	})
+}
+
+// GetWithdrawalStatus godoc
+// @Summary Check withdrawal status
+// @Description Checks the status of a farmer's withdrawal transaction.
+// @Tags Farmers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order_id path string true "Order ID of the transaction"
+// @Success 200 {object} map[string]interface{} "Transaction status retrieved successfully"
+// @Failure 400 {object} map[string]string "Invalid transaction request"
+// @Failure 500 {object} map[string]string "Failed to fetch transaction status"
+// @Router /farmers/withdrawal-status/{order_id} [get]
+func (h *FarmerHandler) GetWithdrawalStatus(c *gin.Context) {
+	orderID := c.Param("order_id")
+
+	// Check withdrawal status in the service
+	status, err := h.FarmerService.CheckWithdrawalStatus(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	// Return transaction status
+	c.JSON(http.StatusOK, status)
 }
