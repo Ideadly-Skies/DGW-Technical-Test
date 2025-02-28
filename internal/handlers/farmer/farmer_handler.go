@@ -6,12 +6,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // FarmerHandler contains services related to farmer operations
 type FarmerHandler struct {
 	FarmerService *services.FarmerService
+}
+
+// PaymentRequest contains structure for farmer transaction
+type PaymentRequest struct {
+	Amount float64 `json:"amount" validate:"required"`
 }
 
 // NewFarmerHandler creates a new FarmerHandler instance
@@ -80,5 +86,69 @@ func (h *FarmerHandler) LoginFarmer(c *gin.Context) {
 		Name:          farmer.Name,
 		Email:         farmer.Email,
 		WalletBalance: farmer.WalletBalance,
+	})
+}
+
+// GetWalletBalance godoc
+// @Summary Retrieve farmer wallet balance
+// @Description Retrieves the wallet balance for the logged-in farmer.
+// @Tags Farmers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Wallet balance retrieved successfully"
+// @Failure 500 {object} map[string]string "Failed to retrieve wallet balance"
+// @Router /farmers/wallet-balance [get]
+func (h *FarmerHandler) GetWalletBalance(c *gin.Context) {
+	// Extract farmer ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)  // Directly get the claims here
+	farmerID := int(user["farmer_id"].(float64)) // Access the "farmer_id" from the claims
+
+	// Retrieve wallet balance using FarmerService
+	balance, err := h.FarmerService.GetFarmerWalletBalance(int(farmerID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to retrieve wallet balance"})
+		return
+	}
+
+	// Return wallet balance
+	c.JSON(http.StatusOK, gin.H{
+		"wallet_balance": balance,
+	})
+}
+
+func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
+	// Extract farmer ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)
+	farmerID := int(user["farmer_id"].(float64))  // Access the "farmer_id" from the claims
+	farmerName := user["name"].(string)            // Access the "name" from the claims
+
+	// Bind and validate request body
+	var req PaymentRequest
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
+		return
+	}
+
+	if req.Amount <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Withdraw amount must be greater than zero"})
+		return
+	}
+
+	// Call service to handle the withdrawal logic
+	transactionID, orderID, vaNumber, err := h.FarmerService.WithdrawMoney(farmerID, req.Amount, farmerName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	// Return withdrawal details with VA number
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "Withdrawal initiated successfully",
+		"transaction_id": transactionID,
+		"order_id":       orderID,
+		"va_number":      vaNumber,
+		"gross_amount":   req.Amount,
+		"status":         "Pending",
 	})
 }

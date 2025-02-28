@@ -42,11 +42,12 @@ CREATE TABLE farmers (
 CREATE TABLE wallet_transactions (
     id SERIAL PRIMARY KEY,
     farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
-    transaction_type VARCHAR(100) CHECK (transaction_type IN ('deposit', 'withdrawal')),
+    transaction_type VARCHAR(100),
     amount DECIMAL(10, 2) NOT NULL,
-    balance_after_transaction DECIMAL(10, 2),
-    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    description TEXT
+    status VARCHAR(50) CHECK (status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Add created_at column
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Add updated_at column
 );
 
 -- Table: Suppliers
@@ -149,46 +150,3 @@ INSERT INTO products (supplier_id, name, description, price, stock_quantity, cat
 (3, 'Electric Sprayer', 'Battery-operated sprayer for efficient spraying', 80.00, 100, 'Alat Pertanian', 'SAS'),
 (3, 'Manual Sprayer', 'Manual sprayer for small-scale farming', 15.00, 300, 'Alat Pertanian', 'SAS'),
 (3, 'Plastic Mulsa', 'Premium quality plastic mulch for crop protection', 10.00, 500, 'Alat Pertanian', 'SAS');
-
--- Insert sample farmers
-INSERT INTO farmers (name, email, password, address, phone_number, farm_type, wallet_balance) VALUES
-('Petani Budi', 'petani.budi@farm.com', 'farmerpass123', 'Jl. Raya No. 10, Bali', '08123456789', 'Vegetables', 100.00),
-('Petani Siti', 'petani.siti@agri.com', 'farmerpass456', 'Jl. Tanah Merah No. 7, Bandung', '08234567890', 'Fruits', 200.00);
-
--- Insert sample wallet transactions for Petani Budi
-INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, balance_after_transaction, description) VALUES
-(1, 'deposit', 150.00, 250.00, 'Deposit from sale of crops'),
-(1, 'withdrawal', 50.00, 200.00, 'ATM withdrawal for cash payment');
-
--- Insert sample wallet transactions for Petani Siti
-INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, balance_after_transaction, description) VALUES
-(2, 'deposit', 300.00, 500.00, 'Deposit from sale of fruits'),
-(2, 'withdrawal', 100.00, 400.00, 'ATM withdrawal for cash payment');
-
-
--- Insert sample orders
-INSERT INTO orders (farmer_id, status, total_price) VALUES
-(1, 'pending', 205.50),
-(2, 'completed', 235.00);
-
--- Insert sample order items
-INSERT INTO order_items (order_id, product_id, quantity, price) VALUES
-(1, 1, 2, 35.50),
-(1, 2, 1, 40.00),
-(2, 3, 3, 50.00),
-(2, 4, 2, 45.00);
-
--- Insert sample payments
-INSERT INTO payments (order_id, amount, payment_method, status) VALUES
-(1, 205.50, 'Credit Card', 'completed'),
-(2, 235.00, 'Bank Transfer', 'completed');
-
--- Insert sample reviews
-INSERT INTO reviews (order_id, farmer_id, rating, comment, status) VALUES
-(1, 1, 5, 'Excellent pesticide, really effective on pests!', 'approved'),
-(2, 2, 4, 'Good quality fertilizer, but a bit expensive.', 'approved');
-
--- Insert sample logs
-INSERT INTO logs (admin_id, action, details) VALUES
-(1, 'Product added', 'Supremo Herbicide and Klensect Pesticide added to the marketplace.'),
-(1, 'Order status updated', 'Order #1 status changed to completed.');

@@ -33,5 +33,5 @@ type Farmer struct {
 	WalletBalance float64 `json:"wallet_balance"` 
 	CreatedAt    string  `json:"created_at"`    
 	UpdatedAt    string  `json:"updated_at"`
-	JWTToken     string    
+	JWTToken     string  `json:"jwt_token"`
 }

@@ -1,13 +1,15 @@
 package main
 
 import (
-	"log"
-	"github.com/joho/godotenv"
 	"dgw-technical-test/config/database"
 	"dgw-technical-test/internal/handlers/farmer"
-	"dgw-technical-test/internal/services/farmer"
+	"dgw-technical-test/internal/middleware"
 	"dgw-technical-test/internal/repositories/farmer"
+	"dgw-technical-test/internal/services/farmer"
+	"log"
+
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func InitializeApp() *gin.Engine {
@@ -40,6 +42,11 @@ func InitializeApp() *gin.Engine {
 
 		// Login farmer
 		farmerRoutes.POST("/login", farmerHandler.LoginFarmer)
+
+		// get wallet balance (protected by JWT middleware)
+		farmerRoutes.GET("/wallet-balance", middleware.JWTAuthMiddleware(), farmerHandler.GetWalletBalance)
+
+		farmerRoutes.POST("/withdraw", middleware.JWTAuthMiddleware(), farmerHandler.WithdrawMoney)
 	}
 
 	return router
@@ -47,7 +54,7 @@ func InitializeApp() *gin.Engine {
 
 func main() {
 	// Migrate data to database
-	// config.MigrateData()
+	config.MigrateData()
 
 	// Initialize the application with Gin and dependencies
 	router := InitializeApp()

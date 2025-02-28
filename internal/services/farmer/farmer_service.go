@@ -1,14 +1,18 @@
 package services
 
 import (
-	"errors"
-	"dgw-technical-test/internal/repositories/farmer"
 	"dgw-technical-test/internal/models/farmer"
+	"dgw-technical-test/internal/repositories/farmer"
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
-	"time"
-	"os"
-	"fmt"
+
+	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
 )
 
 type FarmerService struct {
@@ -71,4 +75,81 @@ func (s *FarmerService) GenerateJWT(farmer *models.Farmer) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(jwtSecret))
 	return tokenString, err
+}
+
+// GetFarmerIDByEmail retrieves the farmer ID using the email
+func (s *FarmerService) GetFarmerIDByEmail(email string) (int, error) {
+	farmer, err := s.FarmerRepo.GetFarmerByEmail(email)
+	if err != nil {
+		return 0, err
+	}
+	return farmer.ID, nil
+}
+
+// GetFarmerWalletBalance retrieves the wallet balance of the farmer by their ID
+func (s *FarmerService) GetFarmerWalletBalance(farmerID int) (float64, error) {
+	walletBalance, err := s.FarmerRepo.GetFarmerWalletBalance(farmerID)
+	if err != nil {
+		return 0, err
+	}
+	return walletBalance, nil
+}
+
+// transaction component for farmer
+var coreAPI coreapi.Client
+
+func Init() {
+	// retrieve server key from .env
+	ServerKey := os.Getenv("MIDTRANS_SERVER_KEY")
+
+	coreAPI = coreapi.Client{}
+	coreAPI.New(ServerKey, midtrans.Sandbox)
+}
+
+// WithdrawMoney handles the process of withdrawing funds for a farmer
+func (s *FarmerService) WithdrawMoney(farmerID int, amount float64, farmerName string) (string, string, string, error) {
+	// Initialize Midtrans
+	Init()
+
+	// Generate order ID
+	orderID := fmt.Sprintf("wd-%d-%d", farmerID, time.Now().Unix())
+
+	// Generate Customer Field Value
+	customFieldValue := fmt.Sprintf("facilitating withdraw request for %s", farmerName)
+
+	// Create a Midtrans charge request
+	request := &coreapi.ChargeReq{
+		PaymentType: coreapi.PaymentTypeBankTransfer,
+		TransactionDetails: midtrans.TransactionDetails{
+			OrderID:  orderID,
+			GrossAmt: int64(amount), // Midtrans uses IDR natively
+		},
+		BankTransfer: &coreapi.BankTransferDetails{
+			Bank: midtrans.BankBca, // Use a specific bank for withdrawals
+		},
+		CustomField1: &customFieldValue,
+	}
+
+	// Send the charge request to Midtrans
+	resp, err := coreAPI.ChargeTransaction(request)
+	if err != nil {
+		return "", "", "", fmt.Errorf("Failed to process withdrawal: %v", err)
+	}
+
+	// Check if VA numbers exist
+	var vaNumber string
+	if len(resp.VaNumbers) > 0 {
+		vaNumber = resp.VaNumbers[0].VANumber // Get the first VA number
+	} else {
+		vaNumber = "No virtual account number available" // Fallback if no VA is provided
+	}
+
+	// Log the transaction in the wallet_transactions table
+	description := fmt.Sprintf("Withdrawal initiated for %s", farmerName)
+	if err := s.FarmerRepo.LogWalletTransaction(farmerID, amount, description); err != nil {
+		return "", "", "", fmt.Errorf("Failed to log transaction: %v", err)
+	}
+
+	return resp.TransactionID, resp.OrderID, vaNumber, nil
+
 }

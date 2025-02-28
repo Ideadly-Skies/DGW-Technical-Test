@@ -47,3 +47,28 @@ func (r *FarmerRepository) UpdateFarmerJWTToken(farmerID int, token string) erro
 	}
 	return nil
 }
+
+// GetFarmerWalletBalance retrieves the wallet balance of the farmer by their ID
+func (r *FarmerRepository) GetFarmerWalletBalance(farmerID int) (float64, error) {
+    var walletBalance float64
+	query := "SELECT wallet_balance FROM farmers WHERE id = $1"
+	err := r.DB.QueryRow(context.Background(), query, farmerID).Scan(&walletBalance)
+    if err != nil {
+        return 0, err
+    }
+    return walletBalance, nil
+}
+
+// LogWalletTransaction logs a new transaction in the wallet_transactions table (PENDING)
+func (r *FarmerRepository) LogWalletTransaction(farmerID int, amount float64, description string) error {
+	// Insert the transaction into the farmers' transaction table (wallet_transactions)
+	transactionQuery := `
+		INSERT INTO wallet_transactions (farmer_id, transaction_type, amount, status, description, created_at, updated_at)
+		VALUES ($1, 'Withdraw', $2, 'pending', $3, NOW(), NOW())
+	`
+	_, txnErr := r.DB.Exec(context.Background(), transactionQuery, farmerID, amount, description)
+	if txnErr != nil {
+		return fmt.Errorf("failed to log transaction: %v", txnErr)
+	}
+	return nil
+}
