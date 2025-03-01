@@ -3,16 +3,19 @@ package main
 import (
 	"dgw-technical-test/config/database"
 	farmer_handler "dgw-technical-test/internal/handlers/farmer"
-	admin_handler "dgw-technical-test/internal/handlers/admin"	
+	admin_handler "dgw-technical-test/internal/handlers/admin"
+	product_handler "dgw-technical-test/internal/handlers/product"
 	
 	"dgw-technical-test/internal/middleware"
 	
 	farmer_service "dgw-technical-test/internal/services/farmer"
 	admin_service "dgw-technical-test/internal/services/admin"
+	product_service "dgw-technical-test/internal/services/product"
 	
 	farmer_repo "dgw-technical-test/internal/repositories/farmer"
 	admin_repo "dgw-technical-test/internal/repositories/admin"	
-	
+	product_repo "dgw-technical-test/internal/repositories/product"	
+
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -35,14 +38,17 @@ func InitializeApp() *gin.Engine {
 	// Create the necessary repositories (dependency injection)
 	farmerRepository := farmer_repo.NewFarmerRepository(config.Pool)
 	adminRepository := admin_repo.NewAdminRepository(config.Pool)
+	productRepository := product_repo.NewProductRepository(config.Pool)
 
 	// Create the necessary services
 	farmerService := farmer_service.NewFarmerService(farmerRepository)
 	adminService := admin_service.NewAdminService(adminRepository)
+	productService := product_service.NewProductService(productRepository)
 
 	// create farmer handler and inject service
 	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)
 	adminHandler := admin_handler.NewAdminHandler(adminService)
+	productHandler := product_handler.NewProductHandler(productService)
 
 	// farmers route grouping under "farmers"
 	farmerRoutes := router.Group("/farmers")
@@ -71,6 +77,13 @@ func InitializeApp() *gin.Engine {
 
 		// Login admin
 		adminRoutes.POST("/login", adminHandler.LoginAdmin)
+	}
+
+	// product route grouping under "products"
+	productRoutes := router.Group("/products")
+	{
+		// View products
+		productRoutes.GET("/view-products", productHandler.GetAllProducts)
 	}
 
 	return router
