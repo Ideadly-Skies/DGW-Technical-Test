@@ -34,3 +34,13 @@ func (r *OrderRepository) AddOrderItem(ctx context.Context, orderID int, item mo
 	}
 	return nil
 }
+
+// UpdateOrderStatus changes the status of an order
+func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID int, status string) error {
+    query := `UPDATE orders SET status = $1 WHERE id = $2`
+    _, err := r.DB.Exec(ctx, query, status, orderID)
+    if err != nil {
+        return fmt.Errorf("failed to update order status: %w", err)
+    }
+    return nil
+}

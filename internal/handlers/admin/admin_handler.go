@@ -117,3 +117,33 @@ func (h *AdminHandler) FacilitatePurchase(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Purchase facilitated successfully"})
 }
+
+// cancel an order made by an admin
+func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
+	// authentication - extract admin ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)
+	adminEmail := user["email"].(string) // access the adminEmail
+
+	// check if admin exists in the database
+	if _, err := h.AdminService.GetAdminByEmail(adminEmail); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Admin not found"})
+		return
+	}
+	
+	// derive orderId from URL parameter 
+	orderIDParam := c.Param("orderID")
+    orderID, err := strconv.Atoi(orderIDParam)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+        return
+    }
+
+	// invoke CancelOrder service by admin 
+    if err := h.PurchaseService.CancelOrder(c.Request.Context(), orderID); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order", "details": err.Error()})
+        return
+    }
+
+	// return the appropriate failure message
+    c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
+}

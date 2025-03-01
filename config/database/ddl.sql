@@ -1,8 +1,8 @@
 -- DDL Queries: Schema Creation (9)
 -- Drop the dependent tables first (those that reference other tables)
-DROP TABLE IF EXISTS wallet_transactions CASCADE;  
-DROP TABLE IF EXISTS reviews CASCADE;              
-DROP TABLE IF EXISTS logs CASCADE;                 
+DROP TABLE IF EXISTS wallet_transactions CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS logs CASCADE;             
 DROP TABLE IF EXISTS payments CASCADE;             
 DROP TABLE IF EXISTS order_items CASCADE;          
 DROP TABLE IF EXISTS orders CASCADE;               

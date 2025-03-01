@@ -48,7 +48,7 @@ func InitializeApp() *gin.Engine {
 	adminService := admin_service.NewAdminService(adminRepository)
 	productService := product_service.NewProductService(productRepository)
 	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository)
-
+	
 	// create farmer handler and inject service
 	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)
 	adminHandler := admin_handler.NewAdminHandler(adminService, purchaseService)
@@ -71,6 +71,9 @@ func InitializeApp() *gin.Engine {
 
 		// Add route to check withdrawal status
 		farmerRoutes.GET("/withdrawal-status/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.GetWithdrawalStatus)
+		
+		// Add route to pay the pending order
+		farmerRoutes.POST("/pay-order/wallet/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.PayOrder)
 	}
 
 	// admin route grouping under "admins" hehe
@@ -84,6 +87,9 @@ func InitializeApp() *gin.Engine {
 
 		// protected route for admin facilitating purchase for farmers
 		adminRoutes.POST("/purchase/:farmerID", middleware.JWTAuthMiddleware(), adminHandler.FacilitatePurchase)
+		
+		// protected route for admin facilitating purchase for farmers
+		adminRoutes.PUT("/cancel-order/:orderID", middleware.JWTAuthMiddleware(), adminHandler.CancelOrderHandler)
 	}
 
 	// product route grouping under "products"
@@ -98,7 +104,7 @@ func InitializeApp() *gin.Engine {
 
 func main() {
 	// Migrate data to database
-	config.MigrateData()
+	// config.MigrateData()
 
 	// Initialize the application with Gin and dependencies
 	router := InitializeApp()

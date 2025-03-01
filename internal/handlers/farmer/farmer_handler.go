@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
+	"strconv"
 )
 
 // FarmerHandler contains services related to farmer operations
@@ -177,4 +178,40 @@ func (h *FarmerHandler) GetWithdrawalStatus(c *gin.Context) {
 
 	// Return transaction status
 	c.JSON(http.StatusOK, status)
+}
+
+// PayOrder allows a farmer to pay for an order using their wallet balance
+func (h *FarmerHandler) PayOrder(c *gin.Context) {
+    orderIDParam := c.Param("order_id")
+    orderID, err := strconv.Atoi(orderIDParam)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+        return
+    }
+
+	// Extract farmer ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)  // Directly get the claims here
+	farmerID := int(user["farmer_id"].(float64)) // Access the "farmer_id" from the claims	
+
+	// check if farmerID is registered in farmers db
+	isRegistered, err := h.FarmerService.IsFarmerRegistered(farmerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check farmer registration", "details": err.Error()})
+		return
+	}
+
+	if !isRegistered {
+		// check if the farmer is registered
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Farmer is not registered"})
+		return
+	}
+
+	// process wallet payment of the farmer
+    err = h.FarmerService.ProcessWalletPayment(c.Request.Context(), farmerID, orderID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process payment", "details": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Payment successful"})
 }

@@ -67,3 +67,8 @@ func (s *PurchaseService) FacilitatePurchase(ctx context.Context, req Facilitate
 	}
 	return nil
 }
+
+// CancelOrder updates the status of an order to "cancelled"
+func (s *PurchaseService) CancelOrder(ctx context.Context, orderID int) error {
+    return s.OrderRepo.UpdateOrderStatus(ctx, orderID, "cancelled")
+}

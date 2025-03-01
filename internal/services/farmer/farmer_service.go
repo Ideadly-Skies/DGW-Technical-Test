@@ -13,6 +13,7 @@ import (
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/coreapi"
+	"context"
 )
 
 type FarmerService struct {
@@ -75,6 +76,17 @@ func (s *FarmerService) GenerateJWT(farmer *models.Farmer) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(jwtSecret))
 	return tokenString, err
+}
+
+// IsFarmerRegistered checks if a farmer is registered by their ID
+func (s *FarmerService) IsFarmerRegistered(farmerID int) (bool, error) {
+	_, err := s.FarmerRepo.GetFarmerByID(farmerID)
+	if err != nil {
+		// farmer is not registered
+		return false, err
+	}
+	// farmer is registered
+	return true, nil
 }
 
 // GetFarmerIDByEmail retrieves the farmer ID using the email
@@ -189,4 +201,16 @@ func (s *FarmerService) CheckWithdrawalStatus(orderID string) (map[string]interf
 
 	// Return the updated status of the transaction
 	return map[string]interface{}{"transaction_status": resp.TransactionStatus}, nil
+}
+
+// process wallet payment for farmers
+func (s *FarmerService) ProcessWalletPayment(ctx context.Context, farmerID, orderID int) error {
+	// Process the order payment
+	err := s.FarmerRepo.ProcessOrder(ctx, fmt.Sprintf("%d", orderID), farmerID)
+	if err != nil {
+		return fmt.Errorf("failed to process order: %v", err)
+	}
+
+	// return no error because there appears to be no error :)
+	return nil
 }

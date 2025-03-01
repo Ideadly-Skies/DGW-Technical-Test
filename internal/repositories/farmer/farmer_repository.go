@@ -48,6 +48,17 @@ func (r *FarmerRepository) UpdateFarmerJWTToken(farmerID int, token string) erro
 	return nil
 }
 
+// GetFarmerByID fetches a farmer by their ID
+func (r *FarmerRepository) GetFarmerByID(farmerID int) (*models.Farmer, error) {
+	query := `SELECT id, name, email, password, wallet_balance FROM farmers WHERE id = $1`
+	var farmer models.Farmer
+	err := r.DB.QueryRow(context.Background(), query, farmerID).Scan(&farmer.ID, &farmer.Name, &farmer.Email, &farmer.Password, &farmer.WalletBalance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get farmer: %w", err)
+	}
+	return &farmer, nil
+}
+
 // GetFarmerWalletBalance retrieves the wallet balance of the farmer by their ID
 func (r *FarmerRepository) GetFarmerWalletBalance(farmerID int) (float64, error) {
     var walletBalance float64
@@ -136,4 +147,82 @@ func (r *FarmerRepository) MarkTransactionAsProcessed(orderID string) error {
 		return fmt.Errorf("failed to mark transaction as processed: %v", err)
 	}
 	return nil
+}
+
+// ProcessOrder processes an order by deducting the total cost from the farmer's wallet and updating stock quantities
+func (r *FarmerRepository) ProcessOrder(ctx context.Context, orderID string, farmerID int) error {
+	tx, err := r.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var totalCost, walletBalance float64
+	err = tx.QueryRow(ctx, "SELECT total_price FROM orders WHERE id = $1 AND farmer_id = $2 AND status = 'pending'", orderID, farmerID).Scan(&totalCost)
+	if err != nil {
+		return fmt.Errorf("failed to get total cost: %w", err)
+	}
+
+	err = tx.QueryRow(ctx, "SELECT wallet_balance FROM farmers WHERE id = $1", farmerID).Scan(&walletBalance)
+	if err != nil {
+		return fmt.Errorf("failed to get wallet balance: %w", err)
+	}
+
+	if walletBalance < totalCost {
+		return fmt.Errorf("insufficient wallet balance")
+	}
+
+	rows, err := tx.Query(ctx, `SELECT product_id, quantity FROM order_items WHERE order_id = $1`, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to get order items: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]struct {
+		ProductID int
+		Quantity  int
+	}, 0)
+
+	for rows.Next() {
+		var item struct {
+			ProductID int
+			Quantity  int
+		}
+		if err := rows.Scan(&item.ProductID, &item.Quantity); err != nil {
+			return fmt.Errorf("failed to scan order item: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	for _, item := range items {
+		var stockQuantity int
+		err = tx.QueryRow(ctx, `SELECT stock_quantity FROM products WHERE id = $1`, item.ProductID).Scan(&stockQuantity)
+		if err != nil {
+			return fmt.Errorf("failed to get stock quantity: %w", err)
+		}
+		if stockQuantity < item.Quantity {
+			_, err := tx.Exec(ctx, "UPDATE orders SET status = 'cancelled' WHERE id = $1", orderID)
+			if err != nil {
+				return fmt.Errorf("failed to update order status: %w", err)
+			}
+			return fmt.Errorf("insufficient stock for product_id %d", item.ProductID)
+		}
+
+		_, err = tx.Exec(ctx, `UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2`, item.Quantity, item.ProductID)
+		if err != nil {
+			return fmt.Errorf("failed to update stock quantity: %w", err)
+		}
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE farmers SET wallet_balance = wallet_balance - $1 WHERE id = $2", totalCost, farmerID)
+	if err != nil {
+		return fmt.Errorf("failed to update wallet balance: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE orders SET status = 'settlement' WHERE id = $1", orderID)
+	if err != nil {
+		return fmt.Errorf("failed to update order status: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
