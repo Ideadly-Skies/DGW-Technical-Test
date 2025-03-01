@@ -2,10 +2,17 @@ package main
 
 import (
 	"dgw-technical-test/config/database"
-	"dgw-technical-test/internal/handlers/farmer"
+	farmer_handler "dgw-technical-test/internal/handlers/farmer"
+	admin_handler "dgw-technical-test/internal/handlers/admin"	
+	
 	"dgw-technical-test/internal/middleware"
-	"dgw-technical-test/internal/repositories/farmer"
-	"dgw-technical-test/internal/services/farmer"
+	
+	farmer_service "dgw-technical-test/internal/services/farmer"
+	admin_service "dgw-technical-test/internal/services/admin"
+	
+	farmer_repo "dgw-technical-test/internal/repositories/farmer"
+	admin_repo "dgw-technical-test/internal/repositories/admin"	
+	
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -26,13 +33,16 @@ func InitializeApp() *gin.Engine {
 	config.InitDB()
 
 	// Create the necessary repositories (dependency injection)
-	farmerRepository := repositories.NewFarmerRepository(config.Pool)
+	farmerRepository := farmer_repo.NewFarmerRepository(config.Pool)
+	adminRepository := admin_repo.NewAdminRepository(config.Pool)
 
 	// Create the necessary services
-	farmerService := services.NewFarmerService(farmerRepository)
+	farmerService := farmer_service.NewFarmerService(farmerRepository)
+	adminService := admin_service.NewAdminService(adminRepository)
 
 	// create farmer handler and inject service
-	farmerHandler := handlers.NewFarmerHandler(farmerService)
+	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)
+	adminHandler := admin_handler.NewAdminHandler(adminService)
 
 	// farmers route grouping under "farmers"
 	farmerRoutes := router.Group("/farmers")
@@ -51,6 +61,16 @@ func InitializeApp() *gin.Engine {
 
 		// Add route to check withdrawal status
 		farmerRoutes.GET("/withdrawal-status/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.GetWithdrawalStatus)
+	}
+
+	// admin route grouping under "admins" hehe
+	adminRoutes := router.Group("/admins")
+	{
+		// Register admin
+		adminRoutes.POST("/register", adminHandler.RegisterAdmin)
+
+		// Login admin
+		adminRoutes.POST("/login", adminHandler.LoginAdmin)
 	}
 
 	return router

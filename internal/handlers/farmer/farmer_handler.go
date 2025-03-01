@@ -15,11 +15,6 @@ type FarmerHandler struct {
 	FarmerService *services.FarmerService
 }
 
-// PaymentRequest contains structure for farmer transaction
-type PaymentRequest struct {
-	Amount float64 `json:"amount" validate:"required"`
-}
-
 // NewFarmerHandler creates a new FarmerHandler instance
 func NewFarmerHandler(farmerService *services.FarmerService) *FarmerHandler {
 	return &FarmerHandler{FarmerService: farmerService}
@@ -122,6 +117,11 @@ func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 	user := c.MustGet("user").(jwt.MapClaims)
 	farmerID := int(user["farmer_id"].(float64))  // Access the "farmer_id" from the claims
 	farmerName := user["name"].(string)           // Access the "name" from the claims
+
+	// PaymentRequest contains structure for farmer transaction
+	type PaymentRequest struct {
+		Amount float64 `json:"amount" validate:"required"`
+	}
 
 	// Bind and validate request body
 	var req PaymentRequest
