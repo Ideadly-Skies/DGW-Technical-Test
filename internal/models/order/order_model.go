@@ -10,6 +10,7 @@ type Order struct {
 	TotalPrice float64   `json:"total_price"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+	Items     []OrderItem `json:"items"`
 }
 
 // OrderItem represents the structure of the order_items table in the database

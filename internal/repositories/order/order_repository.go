@@ -44,3 +44,34 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID int, st
     }
     return nil
 }
+
+// GetOrderById retrieves an order by its ID
+func (r *OrderRepository) GetOrderById(ctx context.Context, orderID int) (*models.Order, error) {
+	var o models.Order
+	query := `SELECT id, farmer_id, status, total_price, created_at, updated_at FROM orders WHERE id = $1 AND status = 'pending'`
+	err := r.DB.QueryRow(ctx, query, orderID).Scan(&o.ID, &o.FarmerID, &o.Status, &o.TotalPrice, &o.CreatedAt, &o.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order by id: %w", err)
+	}
+
+	// Fetch order items
+	rows, err := r.DB.Query(ctx, "SELECT id, product_id, quantity, price, created_at, updated_at FROM order_items WHERE order_id = $1", orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order items: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.OrderItem
+		if err := rows.Scan(&item.ID, &item.ProductID, &item.Quantity, &item.Price, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan order item: %w", err)
+		}
+		o.Items = append(o.Items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over order items: %w", err)
+	}
+
+	return &o, nil
+}

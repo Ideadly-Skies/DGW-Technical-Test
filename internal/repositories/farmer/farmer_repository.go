@@ -224,5 +224,11 @@ func (r *FarmerRepository) ProcessOrder(ctx context.Context, orderID string, far
 		return fmt.Errorf("failed to update order status: %w", err)
 	}
 
+	// Set orders is_processed to true
+	_, err = tx.Exec(ctx, "UPDATE orders SET is_processed = true WHERE id = $1", orderID)
+	if err != nil {
+		return fmt.Errorf("failed to set order as processed: %w", err)
+	}
+
 	return tx.Commit(ctx)
 }

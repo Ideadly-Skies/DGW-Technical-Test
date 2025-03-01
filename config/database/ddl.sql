@@ -82,6 +82,7 @@ CREATE TABLE orders (
     farmer_id INTEGER REFERENCES farmers(id) ON DELETE CASCADE,
     status VARCHAR(100) CHECK (status IN ('pending', 'settlement', 'cancelled')),
     total_price DECIMAL(10, 2),
+    is_processed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

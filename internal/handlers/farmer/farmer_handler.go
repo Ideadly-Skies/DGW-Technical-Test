@@ -113,6 +113,7 @@ func (h *FarmerHandler) GetWalletBalance(c *gin.Context) {
 	})
 }
 
+// withdraw money for the farmer
 func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 	// Extract farmer ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
@@ -214,4 +215,50 @@ func (h *FarmerHandler) PayOrder(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Payment successful"})
+}
+
+func (h *FarmerHandler) ProcessOnlinePayment(c *gin.Context) {
+	// Extract farmer ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)  // Directly get the claims here
+	farmerID := int(user["farmer_id"].(float64)) // Access the "farmer_id" from the claims	
+
+	// check if farmerID is registered in farmers db
+	isRegistered, err := h.FarmerService.IsFarmerRegistered(farmerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check farmer registration", "details": err.Error()})
+		return
+	}
+
+	if !isRegistered {
+		// check if the farmer is registered
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Farmer is not registered"})
+		return
+	}
+
+	// extract order id and prepare online payment statement
+	orderID, _ := strconv.Atoi(c.Param("order_id"))
+    totalCost, itemDescriptions, err := h.FarmerService.PrepareOnlinePayment(c, orderID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment preparation failed", "details": err.Error()})
+        return
+    }
+
+	// prepare payment response statement to execute online payment
+	paymentResponse, err := h.FarmerService.ExecuteOnlinePayment(orderID, totalCost, itemDescriptions)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process online payment", "details": err.Error()})
+        return
+    }
+
+    if paymentResponse.TransactionStatus == "pending" {
+        c.JSON(http.StatusOK, gin.H{
+            "message":        "Purchase initiated successfully",
+            "order_id":       paymentResponse.OrderID,
+            "va_numbers":     paymentResponse.VaNumbers,
+            "total_amount":   totalCost,
+            "transaction_id": paymentResponse.TransactionID,
+        })
+    } else {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Payment not authorized"})
+    }
 }

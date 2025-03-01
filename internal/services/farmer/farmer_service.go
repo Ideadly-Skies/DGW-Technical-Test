@@ -2,7 +2,10 @@ package services
 
 import (
 	"dgw-technical-test/internal/models/farmer"
-	"dgw-technical-test/internal/repositories/farmer"
+	farmer_repo "dgw-technical-test/internal/repositories/farmer"
+	product_repo "dgw-technical-test/internal/repositories/product"
+	order_repo "dgw-technical-test/internal/repositories/order"
+
 	"errors"
 	"fmt"
 	"os"
@@ -14,14 +17,21 @@ import (
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/coreapi"
 	"context"
+	"strings"	
 )
 
 type FarmerService struct {
-	FarmerRepo *repositories.FarmerRepository
+	FarmerRepo  *farmer_repo.FarmerRepository
+	ProductRepo *product_repo.ProductRepository
+	OrderRepo   *order_repo.OrderRepository
 }
 
-func NewFarmerService(farmerRepo *repositories.FarmerRepository) *FarmerService {
-	return &FarmerService{FarmerRepo: farmerRepo}
+func NewFarmerService(farmerRepo *farmer_repo.FarmerRepository, productRepo *product_repo.ProductRepository, orderRepo *order_repo.OrderRepository) *FarmerService {
+	return &FarmerService{
+		FarmerRepo:  farmerRepo,
+		ProductRepo: productRepo,
+		OrderRepo:   orderRepo,
+	}
 }
 
 // RegisterFarmer registers a new farmer with the given data
@@ -120,9 +130,6 @@ func Init() {
 
 // WithdrawMoney handles the process of withdrawing funds for a farmer
 func (s *FarmerService) WithdrawMoney(farmerID int, amount float64, farmerName string) (string, string, string, error) {
-	// Initialize Midtrans
-	Init()
-
 	// Generate order ID
 	orderID := fmt.Sprintf("wd-%d-%d", farmerID, time.Now().Unix())
 
@@ -213,4 +220,53 @@ func (s *FarmerService) ProcessWalletPayment(ctx context.Context, farmerID, orde
 
 	// return no error because there appears to be no error :)
 	return nil
+}
+
+// prepare online statement
+func (s *FarmerService) PrepareOnlinePayment(ctx context.Context, orderID int) (float64, []string, error) {
+    // Fetch the order to calculate total cost and prepare item descriptions
+    order, err := s.OrderRepo.GetOrderById(ctx, orderID)
+    if err != nil {
+        return 0, nil, err
+    }
+
+    var itemDescriptions []string
+    totalCost := 0.0
+
+    for _, item := range order.Items {
+		product, err := s.ProductRepo.GetProductByID(ctx, item.ProductID)
+        if err != nil {
+            return 0, nil, err
+        }
+        itemDescription := fmt.Sprintf("%s x%d", product.Name, item.Quantity)
+        itemDescriptions = append(itemDescriptions, itemDescription)
+        totalCost += product.Price * float64(item.Quantity)
+    }
+
+    return totalCost, itemDescriptions, nil
+}
+
+// execute online statement for the farmer
+func (s *FarmerService) ExecuteOnlinePayment(orderID int, totalCost float64, description []string) (*coreapi.ChargeResponse, error) {
+	orderIDStr := fmt.Sprintf("store-%d-%d", orderID, time.Now().Unix())
+	descriptionStr := strings.Join(description, ", ")
+
+    req := &coreapi.ChargeReq{
+        PaymentType: coreapi.PaymentTypeBankTransfer,
+        TransactionDetails: midtrans.TransactionDetails{
+            OrderID:  orderIDStr,
+            GrossAmt: int64(totalCost),
+        },
+        BankTransfer: &coreapi.BankTransferDetails{
+            Bank: midtrans.BankBca,
+        },
+        CustomField1: &descriptionStr,
+    }
+
+    response, err := coreAPI.ChargeTransaction(req)
+    if err != nil {
+        return nil, err
+    }
+
+    return response, nil
 }

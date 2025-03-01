@@ -44,11 +44,11 @@ func InitializeApp() *gin.Engine {
 	orderRepository := order_repo.NewOrderRepository(config.Pool)
 
 	// Create the necessary services
-	farmerService := farmer_service.NewFarmerService(farmerRepository)
+	farmerService := farmer_service.NewFarmerService(farmerRepository, productRepository, orderRepository)
 	adminService := admin_service.NewAdminService(adminRepository)
 	productService := product_service.NewProductService(productRepository)
 	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository)
-	
+
 	// create farmer handler and inject service
 	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)
 	adminHandler := admin_handler.NewAdminHandler(adminService, purchaseService)
@@ -72,8 +72,11 @@ func InitializeApp() *gin.Engine {
 		// Add route to check withdrawal status
 		farmerRoutes.GET("/withdrawal-status/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.GetWithdrawalStatus)
 		
-		// Add route to pay the pending order
+		// Add route to pay the pending order using wallet payment
 		farmerRoutes.POST("/pay-order/wallet/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.PayOrder)
+
+		// Add route to pay the pending order using online payment
+		farmerRoutes.POST("pay-order/online/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.ProcessOnlinePayment)
 	}
 
 	// admin route grouping under "admins" hehe
@@ -104,10 +107,13 @@ func InitializeApp() *gin.Engine {
 
 func main() {
 	// Migrate data to database
-	// config.MigrateData()
+	config.MigrateData()
 
 	// Initialize the application with Gin and dependencies
 	router := InitializeApp()
+	
+	// init midtrans
+	farmer_service.Init()
 
 	// Start the Gin server on port 8080
 	// close the database connection when the server exits
