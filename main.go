@@ -11,10 +11,12 @@ import (
 	farmer_service "dgw-technical-test/internal/services/farmer"
 	admin_service "dgw-technical-test/internal/services/admin"
 	product_service "dgw-technical-test/internal/services/product"
+	purchase_service "dgw-technical-test/internal/services/purchase"
 	
 	farmer_repo "dgw-technical-test/internal/repositories/farmer"
 	admin_repo "dgw-technical-test/internal/repositories/admin"	
 	product_repo "dgw-technical-test/internal/repositories/product"	
+	order_repo "dgw-technical-test/internal/repositories/order"
 
 	"log"
 
@@ -39,15 +41,17 @@ func InitializeApp() *gin.Engine {
 	farmerRepository := farmer_repo.NewFarmerRepository(config.Pool)
 	adminRepository := admin_repo.NewAdminRepository(config.Pool)
 	productRepository := product_repo.NewProductRepository(config.Pool)
+	orderRepository := order_repo.NewOrderRepository(config.Pool)
 
 	// Create the necessary services
 	farmerService := farmer_service.NewFarmerService(farmerRepository)
 	adminService := admin_service.NewAdminService(adminRepository)
 	productService := product_service.NewProductService(productRepository)
+	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository)
 
 	// create farmer handler and inject service
 	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)
-	adminHandler := admin_handler.NewAdminHandler(adminService)
+	adminHandler := admin_handler.NewAdminHandler(adminService, purchaseService)
 	productHandler := product_handler.NewProductHandler(productService)
 
 	// farmers route grouping under "farmers"
@@ -77,6 +81,9 @@ func InitializeApp() *gin.Engine {
 
 		// Login admin
 		adminRoutes.POST("/login", adminHandler.LoginAdmin)
+
+		// protected route for admin facilitating purchase for farmers
+		adminRoutes.POST("/purchase/:farmerID", middleware.JWTAuthMiddleware(), adminHandler.FacilitatePurchase)
 	}
 
 	// product route grouping under "products"

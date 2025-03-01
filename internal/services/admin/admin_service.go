@@ -58,6 +58,15 @@ func (s *AdminService) LoginAdmin(email, password string) (*admin.Admin, error) 
 	return ad, nil
 }
 
+// GetAdminByEmail retrieves an admin by their email
+func (s *AdminService) GetAdminByEmail(email string) (*admin.Admin, error) {
+	ad, err := s.AdminRepo.GetAdminByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	return ad, nil
+}
+
 // GenerateJWT generates a JWT token for the admin
 func (s *AdminService) GenerateJWT(ad *admin.Admin) (string, error) {
 	// Fetch the secret key from environment variables

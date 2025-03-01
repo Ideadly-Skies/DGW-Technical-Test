@@ -36,3 +36,19 @@ func (r *ProductRepository) GetAllProductsRepo() ([]models.Product, error) {
 
 	return products, nil
 }
+
+// get product by id
+func (r *ProductRepository) GetProductByID(ctx context.Context, productID int) (*models.Product, error) {
+	var p models.Product
+	err := r.DB.QueryRow(ctx, "SELECT id, name, price, stock_quantity FROM products WHERE id = $1", productID).Scan(&p.ID, &p.Name, &p.Price, &p.StockQuantity)
+    if err != nil {
+        return nil, err
+    }
+    return &p, nil
+}
+
+// update product stock - subtract the existing with the proposed change
+func (r *ProductRepository) UpdateProductStock(ctx context.Context, productID, quantity int) error {
+	_, err := r.DB.Exec(ctx, "UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2", quantity, productID)
+    return err
+}

@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;               
 DROP TABLE IF EXISTS products CASCADE;             
 DROP TABLE IF EXISTS suppliers CASCADE;            
-DROP TABLE IF EXISTS admins CASCADE;               
+DROP TABLE IF EXISTS admins CASCADE;              
 DROP TABLE IF EXISTS farmers CASCADE;
 
 -- Table: Admins (DGW)
@@ -144,10 +144,10 @@ INSERT INTO suppliers (name, address, phone_number, category) VALUES
 
 -- Insert sample products
 INSERT INTO products (supplier_id, name, description, price, stock_quantity, category, brand) VALUES
-(1, 'Supremo Herbicide', 'Herbicide for weed control', 35.50, 100, 'Agrokimia', 'DGW'),
-(1, 'Klensect Pesticide', 'Effective pesticide for pest control', 40.00, 120, 'Agrokimia', 'DGW'),
-(2, 'Premium NPK Fertilizer', 'High-quality NPK fertilizer', 50.00, 150, 'Pupuk', 'DGW'),
-(2, 'Organic NPK Fertilizer', 'Organic-based NPK fertilizer', 45.00, 200, 'Pupuk', 'DGW'),
-(3, 'Electric Sprayer', 'Battery-operated sprayer for efficient spraying', 80.00, 100, 'Alat Pertanian', 'SAS'),
-(3, 'Manual Sprayer', 'Manual sprayer for small-scale farming', 15.00, 300, 'Alat Pertanian', 'SAS'),
-(3, 'Plastic Mulsa', 'Premium quality plastic mulch for crop protection', 10.00, 500, 'Alat Pertanian', 'SAS');
+(1, 'Supremo Herbicide', 'Herbicide for weed control', 50000, 100, 'Agrokimia', 'DGW'),
+(1, 'Klensect Pesticide', 'Effective pesticide for pest control', 65000, 120, 'Agrokimia', 'DGW'),
+(2, 'Premium NPK Fertilizer', 'High-quality NPK fertilizer', 75000, 150, 'Pupuk', 'DGW'),
+(2, 'Organic NPK Fertilizer', 'Organic-based NPK fertilizer', 1500000, 200, 'Pupuk', 'DGW'),
+(3, 'Electric Sprayer', 'Battery-operated sprayer for efficient spraying', 20000, 100, 'Alat Pertanian', 'SAS'),
+(3, 'Manual Sprayer', 'Manual sprayer for small-scale farming', 20000, 300, 'Alat Pertanian', 'SAS'),
+(3, 'Plastic Mulsa', 'Premium quality plastic mulch for crop protection', 15000, 500, 'Alat Pertanian', 'SAS');
