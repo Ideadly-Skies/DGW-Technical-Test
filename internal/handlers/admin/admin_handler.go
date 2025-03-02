@@ -124,7 +124,7 @@ func (h *AdminHandler) FacilitatePurchase(c *gin.Context) {
 func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
 	// authentication - extract admin ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
-	adminEmail := user["email"].(string) // access the adminEmail
+	adminEmail := user["email"].(string)
 
 	// Retrieve admin from database to get adminID
 	admin, err := h.AdminService.GetAdminByEmail(adminEmail)

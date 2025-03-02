@@ -18,6 +18,7 @@ import (
 	product_repo "dgw-technical-test/internal/repositories/product"	
 	order_repo "dgw-technical-test/internal/repositories/order"
 	log_repo   "dgw-technical-test/internal/repositories/log"
+	review_repo "dgw-technical-test/internal/repositories/review"
 
 	"log"
 
@@ -44,9 +45,10 @@ func InitializeApp() *gin.Engine {
 	productRepository := product_repo.NewProductRepository(config.Pool)
 	orderRepository := order_repo.NewOrderRepository(config.Pool)
 	logRepository := log_repo.NewLogRepository(config.Pool)
+	reviewRepository := review_repo.NewReviewRepository(config.Pool)
 
 	// Create the necessary services
-	farmerService := farmer_service.NewFarmerService(farmerRepository, productRepository, orderRepository)
+	farmerService := farmer_service.NewFarmerService(farmerRepository, productRepository, orderRepository, reviewRepository)
 	adminService := admin_service.NewAdminService(adminRepository)
 	productService := product_service.NewProductService(productRepository)
 	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository, *logRepository)
@@ -81,7 +83,10 @@ func InitializeApp() *gin.Engine {
 		farmerRoutes.POST("/pay-order/online/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.ProcessOnlinePayment)
 
 		// route to check transaction status
-		farmerRoutes.GET("check-status/:order_id/:midtrans_order_id", middleware.JWTAuthMiddleware(), farmerHandler.CheckAndProcessOrderStatus)
+		farmerRoutes.GET("/check-status/:order_id/:midtrans_order_id", middleware.JWTAuthMiddleware(), farmerHandler.CheckAndProcessOrderStatus)
+
+		// route to leave a review 
+		farmerRoutes.POST("/:order_id/add-review", middleware.JWTAuthMiddleware(), farmerHandler.AddReview)
 	}
 
 	// admin route grouping under "admins" hehe

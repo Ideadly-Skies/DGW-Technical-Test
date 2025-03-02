@@ -5,6 +5,7 @@ import (
 	farmer_repo "dgw-technical-test/internal/repositories/farmer"
 	product_repo "dgw-technical-test/internal/repositories/product"
 	order_repo "dgw-technical-test/internal/repositories/order"
+	review_repo "dgw-technical-test/internal/repositories/review"
 
 	"errors"
 	"fmt"
@@ -24,13 +25,15 @@ type FarmerService struct {
 	FarmerRepo  *farmer_repo.FarmerRepository
 	ProductRepo *product_repo.ProductRepository
 	OrderRepo   *order_repo.OrderRepository
+	ReviewRepo 	*review_repo.ReviewRepository
 }
 
-func NewFarmerService(farmerRepo *farmer_repo.FarmerRepository, productRepo *product_repo.ProductRepository, orderRepo *order_repo.OrderRepository) *FarmerService {
+func NewFarmerService(farmerRepo *farmer_repo.FarmerRepository, productRepo *product_repo.ProductRepository, orderRepo *order_repo.OrderRepository, reviewRepo *review_repo.ReviewRepository) *FarmerService {
 	return &FarmerService{
 		FarmerRepo:  farmerRepo,
 		ProductRepo: productRepo,
 		OrderRepo:   orderRepo,
+		ReviewRepo:  reviewRepo,
 	}
 }
 
@@ -315,4 +318,9 @@ func (s *FarmerService) UpdateStoreQuantity(ctx context.Context, orderID int) er
 		return fmt.Errorf("service failed to update store quantity: %v", err)
 	}
 	return nil
+}
+
+// AddReview allows a farmer to add a review for an order
+func (s *FarmerService) AddReview(ctx context.Context, orderID, farmerID, rating int, comment string) error {
+    return s.ReviewRepo.CreateReview(ctx, orderID, farmerID, rating, comment, "pending")
 }

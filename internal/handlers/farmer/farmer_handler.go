@@ -328,3 +328,56 @@ func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
 		"status":         resp.TransactionStatus,
 	})
 }
+
+func (h *FarmerHandler) AddReview(c *gin.Context) {
+	// Extract farmer ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)
+	farmerID := int(user["farmer_id"].(float64))  // Access the "farmer_id" from the claims
+
+	// check if farmer is registered in db
+	isRegistered, err := h.FarmerService.IsFarmerRegistered(farmerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check farmer registration", "details": err.Error()})
+		return
+	}
+
+	// if not registered
+	if !isRegistered {
+		// farmer is not registered
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Farmer is not registered"})
+		return
+	}
+
+	// derive order id from params
+    orderID, err := strconv.Atoi(c.Param("order_id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+        return
+    }
+
+    // Extract review details from request
+    type ReviewRequest struct {
+        Rating  int    `json:"rating"`
+        Comment string `json:"comment"`
+    }
+    var req ReviewRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review data"})
+        return
+    }
+
+    // Check if the order is settled
+	var isProcessed, _ = h.FarmerService.CheckIfOrderIsProcessed(c.Request.Context(), orderID)	
+	if !isProcessed {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Reviews can only be added for settled orders"})
+        return
+    }
+
+    // Add the review
+    if err := h.FarmerService.AddReview(c.Request.Context(), orderID, farmerID, req.Rating, req.Comment); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add review", "details": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Review added successfully"})
+}
