@@ -4,17 +4,23 @@ import (
 	"context"
 	product_repo "dgw-technical-test/internal/repositories/product"
 	order_repo 	 "dgw-technical-test/internal/repositories/order"
+	log_repo 	 "dgw-technical-test/internal/repositories/log"
 	order_model  "dgw-technical-test/internal/models/order"
 	"fmt"
 )
 
 type PurchaseService struct {
 	ProductRepo product_repo.ProductRepository 
-	OrderRepo   order_repo.OrderRepository 
+	OrderRepo   order_repo.OrderRepository
+	LogRepo		log_repo.LogRepository
 }
 
-func NewPurchaseService(productRepo product_repo.ProductRepository, orderRepo order_repo.OrderRepository) *PurchaseService {
-	return &PurchaseService{ProductRepo: productRepo, OrderRepo: orderRepo}
+func NewPurchaseService(productRepo product_repo.ProductRepository, orderRepo order_repo.OrderRepository, logRepo log_repo.LogRepository) *PurchaseService {
+	return &PurchaseService{
+		ProductRepo: productRepo,
+		OrderRepo: orderRepo,
+		LogRepo: logRepo,	// Initialize the log repo
+	}
 }
 
 type FacilitatePurchaseRequest struct {
@@ -22,7 +28,7 @@ type FacilitatePurchaseRequest struct {
 	Items    []order_model.OrderItem `json:"Items"`
 }
 
-func (s *PurchaseService) FacilitatePurchase(ctx context.Context, req FacilitatePurchaseRequest) error {
+func (s *PurchaseService) FacilitatePurchase(ctx context.Context, adminID int, req FacilitatePurchaseRequest) error {
 	var total float64
 
 	// validation for the product inputted
@@ -59,6 +65,13 @@ func (s *PurchaseService) FacilitatePurchase(ctx context.Context, req Facilitate
 			return err
 		}
 	}
+
+	// log successful order creation
+    logDetails := fmt.Sprintf("Admin %d facilitated a purchase for farmerID %d with total $%.2f", adminID, req.FarmerID, total)
+    if err := s.LogRepo.LogAction(ctx, adminID, "Facilitate Purchase", logDetails); err != nil {
+        return fmt.Errorf("failed to log purchase facilitation: %w", err)
+    }
+	
 	return nil
 }
 

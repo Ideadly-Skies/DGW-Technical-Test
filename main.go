@@ -17,6 +17,7 @@ import (
 	admin_repo "dgw-technical-test/internal/repositories/admin"	
 	product_repo "dgw-technical-test/internal/repositories/product"	
 	order_repo "dgw-technical-test/internal/repositories/order"
+	log_repo   "dgw-technical-test/internal/repositories/log"
 
 	"log"
 
@@ -42,12 +43,13 @@ func InitializeApp() *gin.Engine {
 	adminRepository := admin_repo.NewAdminRepository(config.Pool)
 	productRepository := product_repo.NewProductRepository(config.Pool)
 	orderRepository := order_repo.NewOrderRepository(config.Pool)
+	logRepository := log_repo.NewLogRepository(config.Pool)
 
 	// Create the necessary services
 	farmerService := farmer_service.NewFarmerService(farmerRepository, productRepository, orderRepository)
 	adminService := admin_service.NewAdminService(adminRepository)
 	productService := product_service.NewProductService(productRepository)
-	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository)
+	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository, *logRepository)
 
 	// create farmer handler and inject service
 	farmerHandler := farmer_handler.NewFarmerHandler(farmerService)

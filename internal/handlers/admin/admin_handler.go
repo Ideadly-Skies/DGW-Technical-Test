@@ -81,40 +81,42 @@ func (h *AdminHandler) FacilitatePurchase(c *gin.Context) {
 	user := c.MustGet("user").(jwt.MapClaims)
 	adminEmail := user["email"].(string) // access the adminEmail
 
-	// check if admin exists in the database
-	if _, err := h.AdminService.GetAdminByEmail(adminEmail); err != nil {
+	// Assuming admin.ID exists and GetAdminByEmail returns an admin object which includes an ID
+	if admin, err := h.AdminService.GetAdminByEmail(adminEmail); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Admin not found"})
 		return
+	} else {
+
+		// Extract farmerID from URL parameter
+		farmerID := c.Param("farmerID")
+		if farmerID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Farmer ID is required"})
+			return
+		}
+
+		// Extract items from JSON body
+		var req purchase_services.FacilitatePurchaseRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+			return
+		}
+		
+		// convert farmerId into int and bind it with the request
+		farmerIDInt, err := strconv.Atoi(farmerID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Farmer ID"})
+			return
+		}
+		req.FarmerID = farmerIDInt 
+
+		// Now use admin.ID in your service call
+		if err := h.PurchaseService.FacilitatePurchase(c.Request.Context(), admin.ID, req); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to facilitate purchase", "error": err.Error()})
+			return
+		}
 	}
 
-	// Extract farmerID from URL parameter
-	farmerID := c.Param("farmerID")
-	if farmerID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Farmer ID is required"})
-		return
-	}
-
-	// Extract items from JSON body
-	var req purchase_services.FacilitatePurchaseRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
-		return
-	}
-	
-	// convert farmerId into int and bind it with the request
-	farmerIDInt, err := strconv.Atoi(farmerID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Farmer ID"})
-		return
-	}
-	req.FarmerID = farmerIDInt 
-
-	// Call the purchase service
-    if err := h.PurchaseService.FacilitatePurchase(c.Request.Context(), req); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to facilitate purchase", "error": err.Error()})
-        return
-    }
-
+	// purchase facilitated successfully!
 	c.JSON(http.StatusOK, gin.H{"message": "Purchase facilitated successfully"})
 }
 
