@@ -69,14 +69,17 @@ func InitializeApp() *gin.Engine {
 		// withdraw money from the bank (protected by JWT middleware)
 		farmerRoutes.POST("/withdraw", middleware.JWTAuthMiddleware(), farmerHandler.WithdrawMoney)
 
-		// Add route to check withdrawal status
+		// route to check withdrawal status (Top-Up)
 		farmerRoutes.GET("/withdrawal-status/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.GetWithdrawalStatus)
 		
-		// Add route to pay the pending order using wallet payment
+		// route to pay the pending order using wallet payment
 		farmerRoutes.POST("/pay-order/wallet/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.PayOrder)
 
-		// Add route to pay the pending order using online payment
-		farmerRoutes.POST("pay-order/online/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.ProcessOnlinePayment)
+		// route to pay the pending order using online payment
+		farmerRoutes.POST("/pay-order/online/:order_id", middleware.JWTAuthMiddleware(), farmerHandler.ProcessOnlinePayment)
+
+		// route to check transaction status
+		farmerRoutes.GET("check-status/:order_id/:midtrans_order_id", middleware.JWTAuthMiddleware(), farmerHandler.CheckAndProcessOrderStatus)
 	}
 
 	// admin route grouping under "admins" hehe
@@ -89,7 +92,7 @@ func InitializeApp() *gin.Engine {
 		adminRoutes.POST("/login", adminHandler.LoginAdmin)
 
 		// protected route for admin facilitating purchase for farmers
-		adminRoutes.POST("/purchase/:farmerID", middleware.JWTAuthMiddleware(), adminHandler.FacilitatePurchase)
+		adminRoutes.POST("/facilitate-purchase/:farmerID", middleware.JWTAuthMiddleware(), adminHandler.FacilitatePurchase)
 		
 		// protected route for admin facilitating purchase for farmers
 		adminRoutes.PUT("/cancel-order/:orderID", middleware.JWTAuthMiddleware(), adminHandler.CancelOrderHandler)

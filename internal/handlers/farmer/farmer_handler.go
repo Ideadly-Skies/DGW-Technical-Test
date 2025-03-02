@@ -4,7 +4,7 @@ import (
 	"dgw-technical-test/internal/models/farmer"
 	"dgw-technical-test/internal/services/farmer"
 	"net/http"
-
+	
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -261,4 +261,69 @@ func (h *FarmerHandler) ProcessOnlinePayment(c *gin.Context) {
     } else {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Payment not authorized"})
     }
+}
+
+// CheckAndProcessOrderStatus checks and processes order status updates
+func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
+	// derive order_id from parameter
+	ctx := c.Request.Context()
+	orderID := c.Param("order_id")
+	midtrans_orderID := c.Param("midtrans_order_id")
+
+	// Update the transaction status in the database
+	orderIDInt, err := strconv.Atoi(orderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
+
+	// Check if the order has already been processed
+	isProcessed, err := h.FarmerService.CheckIfOrderIsProcessed(ctx, orderIDInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check transaction processing status"})
+		return
+	}
+
+	// check if the transaction is already processed
+	if isProcessed {
+		c.JSON(http.StatusConflict, gin.H{"message": "Transaction has already been processed"})
+		return
+	}
+
+	// Fetch transaction status (Simulated call to external payment gateway like Midtrans)
+	resp, err := h.FarmerService.CheckTransaction(midtrans_orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transaction status"})
+		return
+	}
+
+	// update order status to settlement
+	err = h.FarmerService.UpdateOrderStatus(ctx, orderIDInt, resp.TransactionStatus)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
+		return
+	}
+
+	// Call the service to update the inventory if the order is in settlement status
+	if resp.TransactionStatus == "settlement" {
+		err = h.FarmerService.UpdateStoreQuantity(ctx, orderIDInt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Mark order as processed
+		err = h.FarmerService.MarkOrderAsProcessed(ctx, orderIDInt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark order as processed"})
+			return
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "Purchase status checked successfully",
+		"order_id":       resp.OrderID,
+		"transaction_id": resp.TransactionID,
+		"status":         resp.TransactionStatus,
+	})
 }

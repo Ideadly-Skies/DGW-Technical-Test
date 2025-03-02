@@ -118,14 +118,14 @@ func (s *FarmerService) GetFarmerWalletBalance(farmerID int) (float64, error) {
 }
 
 // transaction component for farmer
-var coreAPI coreapi.Client
+var CoreAPI coreapi.Client
 
 func Init() {
 	// retrieve server key from .env
 	ServerKey := os.Getenv("MIDTRANS_SERVER_KEY")
 
-	coreAPI = coreapi.Client{}
-	coreAPI.New(ServerKey, midtrans.Sandbox)
+	CoreAPI = coreapi.Client{}
+	CoreAPI.New(ServerKey, midtrans.Sandbox)
 }
 
 // WithdrawMoney handles the process of withdrawing funds for a farmer
@@ -150,7 +150,7 @@ func (s *FarmerService) WithdrawMoney(farmerID int, amount float64, farmerName s
 	}
 
 	// Send the charge request to Midtrans
-	resp, err := coreAPI.ChargeTransaction(request)
+	resp, err := CoreAPI.ChargeTransaction(request)
 	if err != nil {
 		return "", "", "", fmt.Errorf("Failed to process withdrawal: %v", err)
 	}
@@ -174,7 +174,7 @@ func (s *FarmerService) WithdrawMoney(farmerID int, amount float64, farmerName s
 
 // CheckWithdrawalStatus checks the withdrawal status and updates the farmer's wallet if successful
 func (s *FarmerService) CheckWithdrawalStatus(orderID string) (map[string]interface{}, error) {
-	resp , err := coreAPI.CheckTransaction(orderID)
+	resp , err := CoreAPI.CheckTransaction(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch transaction status: %v", err)
 	}
@@ -263,10 +263,56 @@ func (s *FarmerService) ExecuteOnlinePayment(orderID int, totalCost float64, des
         CustomField1: &descriptionStr,
     }
 
-    response, err := coreAPI.ChargeTransaction(req)
+    response, err := CoreAPI.ChargeTransaction(req)
     if err != nil {
         return nil, err
     }
 
     return response, nil
+}
+
+// CheckIfOrderIsProcessed checks if a specific order has already been processed
+func (s *FarmerService) CheckIfOrderIsProcessed(ctx context.Context, orderID int) (bool, error) {
+	isProcessed, err := s.OrderRepo.CheckOrderProcessed(ctx, orderID)
+	if err != nil {
+		return false, fmt.Errorf("service failed to check if order is processed: %v", err)
+	}
+	return isProcessed, nil
+}
+
+// CheckTransaction checks the status of a transaction by order ID
+func (s *FarmerService) CheckTransaction(orderID string) (*coreapi.TransactionStatusResponse, error) {
+	resp, err := CoreAPI.CheckTransaction(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check transaction: %v", err)
+	}
+	return resp, nil
+}
+
+// UpdateOrderStatus updates the order status for an order id
+func (s *FarmerService) UpdateOrderStatus(ctx context.Context, orderID int, status string) error {
+	// Call the repository function to update the order status
+	err := s.OrderRepo.UpdateOrderStatus(ctx, orderID, status)
+	if err != nil {
+		return fmt.Errorf("error updating order status: %v", err)
+	}
+	return nil
+}
+
+// MarkOrderAsProcessed marks an order as processed in the database
+func (s *FarmerService) MarkOrderAsProcessed(ctx context.Context, orderID int) error {
+	err := s.OrderRepo.MarkOrderAsProcessed(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("service failed to mark order as processed: %v", err)
+	}
+	return nil
+}
+
+// update store quantity after transaction reaches settlement status
+func (s *FarmerService) UpdateStoreQuantity(ctx context.Context, orderID int) error {
+	err := s.OrderRepo.UpdateStoreQuantity(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("service failed to update store quantity: %v", err)
+	}
+	return nil
 }
