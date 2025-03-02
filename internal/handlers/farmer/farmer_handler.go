@@ -23,7 +23,15 @@ func NewFarmerHandler(farmerService *services.FarmerService) *FarmerHandler {
 
 // RegisterFarmer godoc
 // @Summary Register a new farmer
-// @Description This endpoint registers a new farmer with name, email, and password.
+// @Description Registers a new farmer with name, email, and password.
+// @Tags Farmer
+// @Accept json
+// @Produce json
+// @Param farmer body farmer_RegisterRequest true "Registration information"
+// @Success 200 {object} map[string]interface{} "message: Farmer registered successfully"
+// @Failure 400 {object} map[string]string "message: Invalid request or missing fields"
+// @Failure 500 {object} map[string]string "message: Internal server error"
+// @Router /farmers/register [post]
 func (h *FarmerHandler) RegisterFarmer(c *gin.Context) {
 	var req models.RegisterRequest
 	if err := c.Bind(&req); err != nil {
@@ -56,6 +64,15 @@ func (h *FarmerHandler) RegisterFarmer(c *gin.Context) {
 
 // LoginFarmer godoc
 // @Summary Login a farmer
+// @Description Logs in a farmer using email and password.
+// @Tags Farmer
+// @Accept json
+// @Produce json
+// @Param login body farmer_LoginRequest true "Login credentials"
+// @Success 200 {object} farmer_LoginResponse "JWT token and farmer info"
+// @Failure 400 {object} map[string]string "message: Invalid request"
+// @Failure 401 {object} map[string]string "message: Invalid email or password"
+// @Router /farmers/login [post]
 func (h *FarmerHandler) LoginFarmer(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -86,14 +103,14 @@ func (h *FarmerHandler) LoginFarmer(c *gin.Context) {
 }
 
 // GetWalletBalance godoc
-// @Summary Retrieve farmer wallet balance
-// @Description Retrieves the wallet balance for the logged-in farmer.
-// @Tags Farmers
+// @Summary Retrieve wallet balance
+// @Description Retrieves the current wallet balance for a logged-in farmer.
+// @Tags Farmer
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{} "Wallet balance retrieved successfully"
-// @Failure 500 {object} map[string]string "Failed to retrieve wallet balance"
+// @Success 200 {object} map[string]float64 "wallet_balance: Current wallet balance"
+// @Failure 500 {object} map[string]string "message: Failed to retrieve wallet balance"
 // @Router /farmers/wallet-balance [get]
 func (h *FarmerHandler) GetWalletBalance(c *gin.Context) {
 	// Extract farmer ID from JWT claims
@@ -113,7 +130,18 @@ func (h *FarmerHandler) GetWalletBalance(c *gin.Context) {
 	})
 }
 
-// withdraw money for the farmer
+// WithdrawMoney godoc
+// @Summary Withdraw money from wallet
+// @Description Allows a farmer to withdraw money from their wallet.
+// @Tags Farmer
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param amount body PaymentRequest true "Amount to withdraw"
+// @Success 200 {object} map[string]interface{} "message: Withdrawal initiated successfully"
+// @Failure 400 {object} map[string]string "message: Invalid request or amount must be greater than zero"
+// @Failure 500 {object} map[string]string "message: Internal server error"
+// @Router /farmers/withdraw [post]
 func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 	// Extract farmer ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
@@ -158,7 +186,7 @@ func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 // GetWithdrawalStatus godoc
 // @Summary Check withdrawal status
 // @Description Checks the status of a farmer's withdrawal transaction.
-// @Tags Farmers
+// @Tags Farmer
 // @Accept json
 // @Produce json
 // @Security BearerAuth
@@ -181,7 +209,19 @@ func (h *FarmerHandler) GetWithdrawalStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
-// PayOrder allows a farmer to pay for an order using their wallet balance
+// PayOrder godoc
+// @Summary Pay for an order using wallet balance
+// @Description Allows a farmer to pay for an order using the balance available in their wallet.
+// @Tags Farmer
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order_id path int true "Order ID"
+// @Success 200 {object} map[string]interface{} "message: Payment successful"
+// @Failure 400 {object} map[string]string "error: Invalid order ID or Farmer is not registered"
+// @Failure 401 {object} map[string]string "error: Unauthorized access"
+// @Failure 500 {object} map[string]string "error: Failed to process payment or check farmer registration"
+// @Router /farmers/pay-order/{order_id} [post]
 func (h *FarmerHandler) PayOrder(c *gin.Context) {
     orderIDParam := c.Param("order_id")
     orderID, err := strconv.Atoi(orderIDParam)
@@ -217,6 +257,19 @@ func (h *FarmerHandler) PayOrder(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Payment successful"})
 }
 
+// ProcessOnlinePayment godoc
+// @Summary Process online payment for an order
+// @Description Allows a farmer to make an online payment for an order.
+// @Tags Farmers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order_id path int true "Order ID"
+// @Success 200 {object} map[string]interface{} "message: Purchase initiated successfully along with transaction details"
+// @Failure 400 {object} map[string]string "error: Payment not authorized or invalid request data"
+// @Failure 401 {object} map[string]string "error: Unauthorized access"
+// @Failure 500 {object} map[string]string "error: Failed to process online payment or check farmer registration"
+// @Router /farmers/pay-online/{order_id} [post]
 func (h *FarmerHandler) ProcessOnlinePayment(c *gin.Context) {
 	// Extract farmer ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)  // Directly get the claims here
@@ -263,7 +316,20 @@ func (h *FarmerHandler) ProcessOnlinePayment(c *gin.Context) {
     }
 }
 
-// CheckAndProcessOrderStatus checks and processes order status updates
+// CheckAndProcessOrderStatus godoc
+// @Summary Check and process the order status
+// @Description Verifies and updates the order status based on transaction data from an external payment gateway.
+// @Tags Farmers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order_id path int true "Order ID"
+// @Param midtrans_order_id query string true "Midtrans Order ID used for fetching transaction status"
+// @Success 200 {object} map[string]interface{} "message: Purchase status checked successfully along with order and transaction details"
+// @Failure 400 {object} map[string]string "error: Invalid order ID or transaction request"
+// @Failure 409 {object} map[string]string "message: Transaction has already been processed"
+// @Failure 500 {object} map[string]string "error: Failed to update order status, fetch transaction status, or process inventory update"
+// @Router /farmers/check-status/{order_id} [get]
 func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
 	// derive order_id from parameter
 	ctx := c.Request.Context()
@@ -329,6 +395,20 @@ func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
 	})
 }
 
+// AddReview godoc
+// @Summary Add a review for an order
+// @Description Allows a farmer to add a review for an order that has reached 'settled' status.
+// @Tags Farmers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order_id path int true "Order ID to which the review is being added"
+// @Param review body ReviewRequest true "Review details including rating and comment"
+// @Success 200 {object} map[string]interface{} "message: Review added successfully"
+// @Failure 400 {object} map[string]string "error: Invalid order ID or review data; or the order is not eligible for review"
+// @Failure 401 {object} map[string]string "error: Unauthorized access if JWT is missing or invalid"
+// @Failure 500 {object} map[string]string "error: Internal server error if there's an issue registering the review in the database"
+// @Router /farmers/review/{order_id} [post]
 func (h *FarmerHandler) AddReview(c *gin.Context) {
 	// Extract farmer ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)

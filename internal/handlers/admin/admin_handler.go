@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	admin "dgw-technical-test/internal/models/admin"
+	admin_model    "dgw-technical-test/internal/models/admin"
+
 	admin_services "dgw-technical-test/internal/services/admin"
 	purchase_services "dgw-technical-test/internal/services/purchase"	
 	
@@ -26,8 +27,17 @@ func NewAdminHandler(adminService *admin_services.AdminService, purchaseService 
 
 // RegisterAdmin godoc
 // @Summary Register a new admin
+// @Description Register a new administrator with name, email, password, and role.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param admin body admin_model.RegisterRequest true "Admin Registration Data"
+// @Success 200 {object} map[string]interface{} "message: Admin registered successfully"
+// @Failure 400 {object} map[string]string "message: Invalid request"
+// @Failure 500 {object} map[string]string "message: Could not register admin"
+// @Router /admins/register [post]
 func (h *AdminHandler) RegisterAdmin(c *gin.Context) {
-	var req admin.RegisterRequest
+	var req admin_model.RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Request"})
 		return
@@ -44,8 +54,17 @@ func (h *AdminHandler) RegisterAdmin(c *gin.Context) {
 
 // LoginAdmin godoc
 // @Summary Login an admin
+// @Description Admin login with email and password.
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param admin body admin_model.LoginRequest true "Admin Login Data"
+// @Success 200 {object} map[string]interface{} "token, name, email: Admin login data"
+// @Failure 400 {object} map[string]string "message: Invalid request"
+// @Failure 401 {object} map[string]string "message: Invalid email or password"
+// @Router /admins/login [post]
 func (h *AdminHandler) LoginAdmin(c *gin.Context) {
-	var req admin.LoginRequest
+	var req admin_model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Request"})
 		return
@@ -71,11 +90,13 @@ func (h *AdminHandler) LoginAdmin(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer token"
-// @Param request body FacilitatePurchaseRequest true "Purchase request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /admin/purchase [post]
+// @Param farmerID path int true "Farmer ID"
+// @Param request body purchase_services.FacilitatePurchaseRequest true "Purchase Request Data"
+// @Success 200 {object} map[string]interface{} "message: Purchase facilitated successfully"
+// @Failure 400 {object} map[string]string "message: Invalid request body or farmer ID"
+// @Failure 404 {object} map[string]string "message: Admin not found"
+// @Failure 500 {object} map[string]string "message: Failed to facilitate purchase"
+// @Router /admins/facilitate-purchase/{farmerID} [post]
 func (h *AdminHandler) FacilitatePurchase(c *gin.Context) {
 	// authentication - extract admin ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
@@ -120,7 +141,19 @@ func (h *AdminHandler) FacilitatePurchase(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Purchase facilitated successfully"})
 }
 
-// cancel an order made by an admin
+// CancelOrderHandler godoc
+// @Summary Cancel an order
+// @Description Admin cancels an order
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param orderID path int true "Order ID"
+// @Success 200 {object} map[string]interface{} "message: Order cancelled successfully"
+// @Failure 400 {object} map[string]string "error: Invalid order ID"
+// @Failure 404 {object} map[string]string "message: Admin not found"
+// @Failure 500 {object} map[string]string "error: Failed to cancel order"
+// @Router /admins/cancel-order/{orderID} [put]
 func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
 	// authentication - extract admin ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
@@ -150,7 +183,20 @@ func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }
 
-// ApproveOrRejectReview handles the approval or rejection of a review
+// ApproveOrRejectReview godoc
+// @Summary Approve or Reject a review
+// @Description Admin approves or rejects a review based on review ID and status query parameter
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param review_id path int true "Review ID"
+// @Param status query string true "Review status ('approved' or 'rejected')"
+// @Success 200 {object} map[string]interface{} "message: Review status updated successfully"
+// @Failure 400 {object} map[string]string "error: Invalid review ID or status value"
+// @Failure 404 {object} map[string]string "message: Admin not found"
+// @Failure 500 {object} map[string]string "error: Failed to update review status"
+// @Router /admins/reviews/{review_id} [post]
 func (h *AdminHandler) ApproveOrRejectReview(c *gin.Context) {
 	// authentication - extract admin ID from JWT claims
 	user := c.MustGet("user").(jwt.MapClaims)
@@ -185,7 +231,19 @@ func (h *AdminHandler) ApproveOrRejectReview(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Review status updated successfully"})
 }
 
-// HandleDeleteRejectedReview processes the deletion of rejected reviews.
+
+// HandleDeleteRejectedReview godoc
+// @Summary Delete a rejected review
+// @Description Admin deletes a review that has been marked as 'rejected'
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param review_id path int true "Review ID"
+// @Success 200 {object} map[string]interface{} "message: Review deleted successfully"
+// @Failure 400 {object} map[string]string "error: Invalid review ID"
+// @Failure 500 {object} map[string]string "error: Failed to delete review"
+// @Router /admins/delete-review/{review_id} [delete]
 func (h *AdminHandler) HandleDeleteRejectedReview(c *gin.Context) {
 	reviewIDParam := c.Param("review_id")
 	reviewID, err := strconv.Atoi(reviewIDParam)

@@ -20,6 +20,12 @@ import (
 	log_repo   "dgw-technical-test/internal/repositories/log"
 	review_repo "dgw-technical-test/internal/repositories/review"
 
+	_ "dgw-technical-test/internal/models/admin"
+	_  "dgw-technical-test/internal/models/farmer"
+	_  "dgw-technical-test/internal/models/order"
+	_ "dgw-technical-test/internal/models/product"
+	_ "dgw-technical-test/internal/models/review"
+
 	"log"
 
 	"github.com/gin-gonic/gin"

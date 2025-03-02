@@ -17,11 +17,12 @@ func NewProductHandler(productService *services.ProductService) *ProductHandler 
 
 // GetAllProducts godoc
 // @Summary Retrieve all products
-// @Description get all the products 
+// @Description Retrieves a list of all available products from the database, providing detailed information about each product.
 // @Tags products
 // @Accept  json
 // @Produce  json
-// @Success 200 {array} models.Product
+// @Success 200 {array} Product "An array of products with detailed information including ID, name, description, price, and stock quantity"
+// @Failure 500 {object} map[string]string "error: Unable to fetch product data due to internal server error"
 // @Router /products [get]
 func (h *ProductHandler) GetAllProducts(c *gin.Context) {
 	products, err := h.ProductService.GetAllProductsService()
