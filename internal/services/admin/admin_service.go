@@ -2,7 +2,9 @@ package services
 
 import (
 	admin "dgw-technical-test/internal/models/admin"
-	"dgw-technical-test/internal/repositories/admin"
+	admin_repo "dgw-technical-test/internal/repositories/admin"
+	review_repo "dgw-technical-test/internal/repositories/review"	
+
 	"errors"
 	"fmt"
 	"os"
@@ -10,14 +12,19 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
+	"context"
 )
 
 type AdminService struct {
-	AdminRepo *repositories.AdminRepository
+	AdminRepo *admin_repo.AdminRepository
+	ReviewRepo *review_repo.ReviewRepository
 }
 
-func NewAdminService(adminRepo *repositories.AdminRepository) *AdminService {
-	return &AdminService{AdminRepo: adminRepo}
+func NewAdminService(adminRepo *admin_repo.AdminRepository, reviewRepo *review_repo.ReviewRepository) *AdminService {
+	return &AdminService{
+		AdminRepo: adminRepo,
+		ReviewRepo: reviewRepo,
+	}
 }
 
 // RegisterAdmin registers a new admin with the given data
@@ -85,4 +92,31 @@ func (s *AdminService) GenerateJWT(ad *admin.Admin) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(jwtSecret))
 	return tokenString, err
+}
+
+// update review status for admin
+func (s *AdminService) UpdateReviewStatus(ctx context.Context, reviewID int, status string) error {
+	return s.ReviewRepo.UpdateReviewStatus(ctx, reviewID, status)
+}
+
+// DeleteRejectedReview deletes a review if its status is 'rejected'.
+func (s *AdminService) DeleteRejectedReview(ctx context.Context, reviewID int) error {
+	// First, check the current status of the review.
+	review, err := s.ReviewRepo.GetReviewByID(ctx, reviewID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve review: %w", err)
+	}
+
+	// Check if the review status is 'rejected'.
+	if review.Status != "rejected" {
+		return fmt.Errorf("review status is not rejected: status=%s", review.Status)
+	}
+
+	// Proceed to delete the review as its status is 'rejected'.
+	err = s.ReviewRepo.DeleteReview(ctx, reviewID)
+	if err != nil {
+		return fmt.Errorf("failed to delete review: %w", err)
+	}
+
+	return nil
 }

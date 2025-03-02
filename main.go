@@ -49,7 +49,7 @@ func InitializeApp() *gin.Engine {
 
 	// Create the necessary services
 	farmerService := farmer_service.NewFarmerService(farmerRepository, productRepository, orderRepository, reviewRepository)
-	adminService := admin_service.NewAdminService(adminRepository)
+	adminService := admin_service.NewAdminService(adminRepository, reviewRepository)
 	productService := product_service.NewProductService(productRepository)
 	purchaseService := purchase_service.NewPurchaseService(*productRepository, *orderRepository, *logRepository)
 
@@ -103,6 +103,12 @@ func InitializeApp() *gin.Engine {
 		
 		// protected route for admin facilitating purchase for farmers
 		adminRoutes.PUT("/cancel-order/:orderID", middleware.JWTAuthMiddleware(), adminHandler.CancelOrderHandler)
+
+		// protected route for admin to update review status for farmers (using query parameter)
+		adminRoutes.POST("/reviews/:review_id", middleware.JWTAuthMiddleware(), adminHandler.ApproveOrRejectReview)
+
+		// protected route for admin to delete review status for farmers (using query parameter)
+		adminRoutes.DELETE("/reviews/:review_id", middleware.JWTAuthMiddleware(), adminHandler.HandleDeleteRejectedReview)
 	}
 
 	// product route grouping under "products"

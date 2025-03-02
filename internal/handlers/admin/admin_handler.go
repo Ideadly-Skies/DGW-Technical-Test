@@ -149,3 +149,56 @@ func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }
+
+// ApproveOrRejectReview handles the approval or rejection of a review
+func (h *AdminHandler) ApproveOrRejectReview(c *gin.Context) {
+	// authentication - extract admin ID from JWT claims
+	user := c.MustGet("user").(jwt.MapClaims)
+	adminEmail := user["email"].(string)
+
+	// check if admin exists within the db
+	_, err := h.AdminService.GetAdminByEmail(adminEmail)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Admin not found"})
+		return
+	}	
+		
+	// retrieve review_id from 
+	reviewIDParam := c.Param("review_id")
+	reviewID, err := strconv.Atoi(reviewIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review ID"})
+		return
+	}
+
+	status := c.Query("status")
+	if status != "approved" && status != "rejected" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status value"})
+		return
+	}
+
+	if err := h.AdminService.UpdateReviewStatus(c.Request.Context(), reviewID, status); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review status", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Review status updated successfully"})
+}
+
+// HandleDeleteRejectedReview processes the deletion of rejected reviews.
+func (h *AdminHandler) HandleDeleteRejectedReview(c *gin.Context) {
+	reviewIDParam := c.Param("review_id")
+	reviewID, err := strconv.Atoi(reviewIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review ID"})
+		return
+	}
+
+	err = h.AdminService.DeleteRejectedReview(c.Request.Context(), reviewID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Review deleted successfully"})
+}
