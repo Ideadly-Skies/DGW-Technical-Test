@@ -126,26 +126,26 @@ func (h *AdminHandler) CancelOrderHandler(c *gin.Context) {
 	user := c.MustGet("user").(jwt.MapClaims)
 	adminEmail := user["email"].(string) // access the adminEmail
 
-	// check if admin exists in the database
-	if _, err := h.AdminService.GetAdminByEmail(adminEmail); err != nil {
+	// Retrieve admin from database to get adminID
+	admin, err := h.AdminService.GetAdminByEmail(adminEmail)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Admin not found"})
 		return
 	}
-	
-	// derive orderId from URL parameter 
+
+	// Extract orderId from URL parameter
 	orderIDParam := c.Param("orderID")
-    orderID, err := strconv.Atoi(orderIDParam)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
-        return
-    }
+	orderID, err := strconv.Atoi(orderIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
 
-	// invoke CancelOrder service by admin 
-    if err := h.PurchaseService.CancelOrder(c.Request.Context(), orderID); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order", "details": err.Error()})
-        return
-    }
+	// Invoke CancelOrder service by admin
+	if err := h.PurchaseService.CancelOrder(c.Request.Context(), admin.ID, orderID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order", "details": err.Error()})
+		return
+	}
 
-	// return the appropriate failure message
-    c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }

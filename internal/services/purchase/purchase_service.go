@@ -76,6 +76,17 @@ func (s *PurchaseService) FacilitatePurchase(ctx context.Context, adminID int, r
 }
 
 // CancelOrder updates the status of an order to "cancelled"
-func (s *PurchaseService) CancelOrder(ctx context.Context, orderID int) error {
-    return s.OrderRepo.UpdateOrderStatus(ctx, orderID, "cancelled")
+func (s *PurchaseService) CancelOrder(ctx context.Context,adminID int, orderID int) error {
+	if err := s.OrderRepo.UpdateOrderStatus(ctx, orderID, "cancelled"); err != nil {
+		return fmt.Errorf("failed to cancel order: %v", err)
+	}
+
+	// Log this action
+	action := "Cancel Order"
+	details := fmt.Sprintf("Order ID %d cancelled by Admin ID %d", orderID, adminID)
+	if err := s.LogRepo.LogAction(ctx, adminID, action, details); err != nil {
+		return fmt.Errorf("failed to log cancel order action: %v", err)
+	}
+
+	return nil
 }
