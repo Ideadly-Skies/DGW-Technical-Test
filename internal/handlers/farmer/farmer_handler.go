@@ -306,6 +306,7 @@ func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
 
 	// Call the service to update the inventory if the order is in settlement status
 	if resp.TransactionStatus == "settlement" {
+		// update store quantity after settlement (need to make it into a transaction)
 		err = h.FarmerService.UpdateStoreQuantity(ctx, orderIDInt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

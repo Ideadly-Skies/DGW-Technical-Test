@@ -110,7 +110,7 @@ func InitializeApp() *gin.Engine {
 
 func main() {
 	// Migrate data to database
-	config.MigrateData()
+	// config.MigrateData()
 
 	// Initialize the application with Gin and dependencies
 	router := InitializeApp()

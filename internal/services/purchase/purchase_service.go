@@ -58,12 +58,6 @@ func (s *PurchaseService) FacilitatePurchase(ctx context.Context, req Facilitate
 		if err != nil {
 			return err
 		}
-
-		// we don't update the product stock first until successful purchase of the products
-		// err = s.ProductRepo.UpdateProductStock(ctx, item.ProductID, -item.Quantity)
-		// if err != nil {
-		// 	return err
-		// }
 	}
 	return nil
 }

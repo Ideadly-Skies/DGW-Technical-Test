@@ -91,6 +91,12 @@ func (r *OrderRepository) MarkOrderAsProcessed(ctx context.Context, orderID int)
 	if err != nil {
 		return fmt.Errorf("failed to mark order as processed: %w", err)
 	}
+
+	_, err = r.DB.Exec(ctx, "UPDATE orders SET payment_method = 'online' WHERE id = $1", orderID)
+	if err != nil {
+		return fmt.Errorf("failed to mark order as processed: %w", err)
+	}
+
 	return nil
 }
 

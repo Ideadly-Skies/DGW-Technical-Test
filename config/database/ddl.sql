@@ -2,7 +2,7 @@
 -- Drop the dependent tables first (those that reference other tables)
 DROP TABLE IF EXISTS wallet_transactions CASCADE;
 DROP TABLE IF EXISTS reviews CASCADE;
-DROP TABLE IF EXISTS logs CASCADE;             
+DROP TABLE IF EXISTS logs CASCADE;         
 DROP TABLE IF EXISTS payments CASCADE;             
 DROP TABLE IF EXISTS order_items CASCADE;          
 DROP TABLE IF EXISTS orders CASCADE;               
@@ -83,6 +83,7 @@ CREATE TABLE orders (
     status VARCHAR(100) CHECK (status IN ('pending', 'settlement', 'cancelled')),
     total_price DECIMAL(10, 2),
     is_processed BOOLEAN DEFAULT FALSE,
+    payment_method VARCHAR(250),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -94,17 +95,6 @@ CREATE TABLE order_items (
     product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
     quantity INT,
     price DECIMAL(10, 2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table: Payments
-CREATE TABLE payments (
-    id SERIAL PRIMARY KEY,
-    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
-    amount DECIMAL(10, 2),
-    payment_method VARCHAR(250),
-    status VARCHAR(100) CHECK (status IN ('pending', 'settlement', 'failed')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
