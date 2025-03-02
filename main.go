@@ -30,6 +30,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	docs "dgw-technical-test/docs"
+	"github.com/gin-contrib/static" 
+    "github.com/swaggo/gin-swagger" 
+	swaggerFiles "github.com/swaggo/files"
 )
 
 func InitializeApp() *gin.Engine {
@@ -141,6 +146,21 @@ func main() {
 	// close the database connection when the server exits
 	defer config.CloseDB()
 
+	// Set the doc info (if it hasn't been set)
+    docs.SwaggerInfo.BasePath = "/v1"
+    docs.SwaggerInfo.Title = "DGW Online Marketplace API Documentation"
+    docs.SwaggerInfo.Description = "Sample Server for DGW Online Marketplace."
+    docs.SwaggerInfo.Version = "1.0"
+    docs.SwaggerInfo.Host = "localhost:8080"
+
+    // Use static files
+    router.Use(static.Serve("/swaggerui", static.LocalFile("./swaggerui", true)))
+
+    // Setup route for serving the JSON from Swagger
+    url := ginSwagger.URL("http://localhost:8080/swagger/doc.json") // The url pointing to API definition
+    router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+
+	// run the route at port 8080
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"dgw-technical-test/internal/services/product"
 	"net/http"
+	_ "dgw-technical-test/internal/models/product"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +22,7 @@ func NewProductHandler(productService *services.ProductService) *ProductHandler 
 // @Tags products
 // @Accept  json
 // @Produce  json
-// @Success 200 {array} Product "An array of products with detailed information including ID, name, description, price, and stock quantity"
+// @Success 200 {array} models.Product "An array of products with detailed information including ID, name, description, price, and stock quantity"
 // @Failure 500 {object} map[string]string "error: Unable to fetch product data due to internal server error"
 // @Router /products [get]
 func (h *ProductHandler) GetAllProducts(c *gin.Context) {

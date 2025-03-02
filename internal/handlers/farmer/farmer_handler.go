@@ -27,7 +27,7 @@ func NewFarmerHandler(farmerService *services.FarmerService) *FarmerHandler {
 // @Tags Farmer
 // @Accept json
 // @Produce json
-// @Param farmer body farmer_RegisterRequest true "Registration information"
+// @Param farmer body models.RegisterRequest true "Registration information"
 // @Success 200 {object} map[string]interface{} "message: Farmer registered successfully"
 // @Failure 400 {object} map[string]string "message: Invalid request or missing fields"
 // @Failure 500 {object} map[string]string "message: Internal server error"
@@ -68,8 +68,8 @@ func (h *FarmerHandler) RegisterFarmer(c *gin.Context) {
 // @Tags Farmer
 // @Accept json
 // @Produce json
-// @Param login body farmer_LoginRequest true "Login credentials"
-// @Success 200 {object} farmer_LoginResponse "JWT token and farmer info"
+// @Param login body models.LoginRequest true "Login credentials"
+// @Success 200 {object} models.LoginResponse "JWT token and farmer info"
 // @Failure 400 {object} map[string]string "message: Invalid request"
 // @Failure 401 {object} map[string]string "message: Invalid email or password"
 // @Router /farmers/login [post]
@@ -130,6 +130,11 @@ func (h *FarmerHandler) GetWalletBalance(c *gin.Context) {
 	})
 }
 
+// PaymentRequest contains structure for farmer transaction
+type PaymentRequest struct {
+	Amount float64 `json:"amount" validate:"required"`
+}
+
 // WithdrawMoney godoc
 // @Summary Withdraw money from wallet
 // @Description Allows a farmer to withdraw money from their wallet.
@@ -147,11 +152,6 @@ func (h *FarmerHandler) WithdrawMoney(c *gin.Context) {
 	user := c.MustGet("user").(jwt.MapClaims)
 	farmerID := int(user["farmer_id"].(float64))  // Access the "farmer_id" from the claims
 	farmerName := user["name"].(string)           // Access the "name" from the claims
-
-	// PaymentRequest contains structure for farmer transaction
-	type PaymentRequest struct {
-		Amount float64 `json:"amount" validate:"required"`
-	}
 
 	// Bind and validate request body
 	var req PaymentRequest
@@ -395,6 +395,12 @@ func (h *FarmerHandler) CheckAndProcessOrderStatus(c *gin.Context) {
 	})
 }
 
+// Extract review details from request
+type ReviewRequest struct {
+	Rating  int    `json:"rating"`
+	Comment string `json:"comment"`
+}
+
 // AddReview godoc
 // @Summary Add a review for an order
 // @Description Allows a farmer to add a review for an order that has reached 'settled' status.
@@ -435,11 +441,6 @@ func (h *FarmerHandler) AddReview(c *gin.Context) {
         return
     }
 
-    // Extract review details from request
-    type ReviewRequest struct {
-        Rating  int    `json:"rating"`
-        Comment string `json:"comment"`
-    }
     var req ReviewRequest
     if err := c.ShouldBindJSON(&req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review data"})

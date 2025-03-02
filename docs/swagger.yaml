@@ -1,0 +1,750 @@
+definitions:
+  dgw-technical-test_internal_models_admin.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  dgw-technical-test_internal_models_admin.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
+    type: object
+  dgw-technical-test_internal_models_farmer.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  dgw-technical-test_internal_models_farmer.LoginResponse:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      token:
+        type: string
+      wallet_balance:
+        type: number
+    type: object
+  dgw-technical-test_internal_models_farmer.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  handlers.PaymentRequest:
+    properties:
+      amount:
+        type: number
+    required:
+    - amount
+    type: object
+  handlers.ReviewRequest:
+    properties:
+      comment:
+        type: string
+      rating:
+        type: integer
+    type: object
+  models.OrderItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      order_id:
+        type: integer
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.Product:
+    properties:
+      brand:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      stock_quantity:
+        type: integer
+      supplier_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  services.FacilitatePurchaseRequest:
+    properties:
+      Items:
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+      farmerID:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /admins/cancel-order/{orderID}:
+    put:
+      consumes:
+      - application/json
+      description: Admin cancels an order
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Order cancelled successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid order ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'message: Admin not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to cancel order'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cancel an order
+      tags:
+      - Admin
+  /admins/delete-review/{review_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Admin deletes a review that has been marked as 'rejected'
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Review ID
+        in: path
+        name: review_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Review deleted successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid review ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to delete review'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a rejected review
+      tags:
+      - Admin
+  /admins/facilitate-purchase/{farmerID}:
+    post:
+      consumes:
+      - application/json
+      description: Admin facilitates a purchase by logging the order and adjusting
+        inventory
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Farmer ID
+        in: path
+        name: farmerID
+        required: true
+        type: integer
+      - description: Purchase Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/services.FacilitatePurchaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Purchase facilitated successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'message: Invalid request body or farmer ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'message: Admin not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'message: Failed to facilitate purchase'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Facilitate a purchase for a farmer
+      tags:
+      - Admin
+  /admins/login:
+    post:
+      consumes:
+      - application/json
+      description: Admin login with email and password.
+      parameters:
+      - description: Admin Login Data
+        in: body
+        name: admin
+        required: true
+        schema:
+          $ref: '#/definitions/dgw-technical-test_internal_models_admin.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'token, name, email: Admin login data'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'message: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'message: Invalid email or password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login an admin
+      tags:
+      - Admin
+  /admins/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new administrator with name, email, password, and role.
+      parameters:
+      - description: Admin Registration Data
+        in: body
+        name: admin
+        required: true
+        schema:
+          $ref: '#/definitions/dgw-technical-test_internal_models_admin.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Admin registered successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'message: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'message: Could not register admin'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new admin
+      tags:
+      - admin
+  /admins/reviews/{review_id}:
+    post:
+      consumes:
+      - application/json
+      description: Admin approves or rejects a review based on review ID and status
+        query parameter
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Review ID
+        in: path
+        name: review_id
+        required: true
+        type: integer
+      - description: Review status ('approved' or 'rejected')
+        in: query
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Review status updated successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid review ID or status value'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'message: Admin not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update review status'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Approve or Reject a review
+      tags:
+      - Admin
+  /farmers/check-status/{order_id}:
+    get:
+      consumes:
+      - application/json
+      description: Verifies and updates the order status based on transaction data
+        from an external payment gateway.
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      - description: Midtrans Order ID used for fetching transaction status
+        in: query
+        name: midtrans_order_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Purchase status checked successfully along with order
+            and transaction details'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid order ID or transaction request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'message: Transaction has already been processed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update order status, fetch transaction status,
+            or process inventory update'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check and process the order status
+      tags:
+      - Farmers
+  /farmers/login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in a farmer using email and password.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/dgw-technical-test_internal_models_farmer.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token and farmer info
+          schema:
+            $ref: '#/definitions/dgw-technical-test_internal_models_farmer.LoginResponse'
+        "400":
+          description: 'message: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'message: Invalid email or password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login a farmer
+      tags:
+      - Farmer
+  /farmers/pay-online/{order_id}:
+    post:
+      consumes:
+      - application/json
+      description: Allows a farmer to make an online payment for an order.
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Purchase initiated successfully along with transaction
+            details'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Payment not authorized or invalid request data'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized access'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to process online payment or check farmer registration'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Process online payment for an order
+      tags:
+      - Farmers
+  /farmers/pay-order/{order_id}:
+    post:
+      consumes:
+      - application/json
+      description: Allows a farmer to pay for an order using the balance available
+        in their wallet.
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Payment successful'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid order ID or Farmer is not registered'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized access'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to process payment or check farmer registration'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Pay for an order using wallet balance
+      tags:
+      - Farmer
+  /farmers/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new farmer with name, email, and password.
+      parameters:
+      - description: Registration information
+        in: body
+        name: farmer
+        required: true
+        schema:
+          $ref: '#/definitions/dgw-technical-test_internal_models_farmer.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Farmer registered successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'message: Invalid request or missing fields'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'message: Internal server error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new farmer
+      tags:
+      - Farmer
+  /farmers/review/{order_id}:
+    post:
+      consumes:
+      - application/json
+      description: Allows a farmer to add a review for an order that has reached 'settled'
+        status.
+      parameters:
+      - description: Order ID to which the review is being added
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      - description: Review details including rating and comment
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Review added successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid order ID or review data; or the order is not
+            eligible for review'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized access if JWT is missing or invalid'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Internal server error if there''s an issue registering
+            the review in the database'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a review for an order
+      tags:
+      - Farmers
+  /farmers/wallet-balance:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current wallet balance for a logged-in farmer.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'wallet_balance: Current wallet balance'
+          schema:
+            additionalProperties:
+              type: number
+            type: object
+        "500":
+          description: 'message: Failed to retrieve wallet balance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve wallet balance
+      tags:
+      - Farmer
+  /farmers/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Allows a farmer to withdraw money from their wallet.
+      parameters:
+      - description: Amount to withdraw
+        in: body
+        name: amount
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Withdrawal initiated successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'message: Invalid request or amount must be greater than zero'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'message: Internal server error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Withdraw money from wallet
+      tags:
+      - Farmer
+  /farmers/withdrawal-status/{order_id}:
+    get:
+      consumes:
+      - application/json
+      description: Checks the status of a farmer's withdrawal transaction.
+      parameters:
+      - description: Order ID of the transaction
+        in: path
+        name: order_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction status retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid transaction request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to fetch transaction status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check withdrawal status
+      tags:
+      - Farmer
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of all available products from the database, providing
+        detailed information about each product.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: An array of products with detailed information including ID,
+            name, description, price, and stock quantity
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "500":
+          description: 'error: Unable to fetch product data due to internal server
+            error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Retrieve all products
+      tags:
+      - products
+swagger: "2.0"
