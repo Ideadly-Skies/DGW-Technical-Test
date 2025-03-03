@@ -32,6 +32,5 @@ This project's documentation could be accessed via http://localhost:8080/swagger
 
 ### Diagrams
 
-- The project's diagram could be accessed via this link: https://excalidraw.com/#json=8kAb7QrTco4sqpOCjUUnl,-LfJHdMapobTRk9xSTpleA
-
+- The project's diagram could be accessed via this link: https://excalidraw.com/#json=NOqywD8Gtj12aP56h2Akf,v4bF_iyjctBQCiujX3n17g
 - Entity Relationship Diagram could be located in this project root directory slash (/) diagram.
